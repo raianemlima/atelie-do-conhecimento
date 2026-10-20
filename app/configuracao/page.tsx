@@ -1,0 +1,3 @@
+export default function ConfigurationPage() {
+  return <main className="auth-page"><div className="auth-card"><span className="brand-mark">A</span><p className="eyebrow">CONFIGURAÇÃO NECESSÁRIA</p><h1>Conecte o Ateliê ao Supabase</h1><p>O modo protegido exige autenticação e armazenamento privado. Crie o arquivo <code>.env.local</code> na raiz do projeto com as variáveis fornecidas pelo Supabase.</p><pre>NEXT_PUBLIC_SUPABASE_URL=...{`\n`}NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...</pre><p className="auth-footnote">Nenhum dado local será tratado como protegido enquanto essa configuração não estiver disponível.</p></div></main>;
+}
