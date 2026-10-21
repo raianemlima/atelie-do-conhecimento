@@ -4,7 +4,7 @@ const ABBREVIATIONS = new Set(["art", "arts", "inc", "al", "p", "pp", "n", "nº"
 export function splitSentences(text: string): string[] {
   const sentences: string[] = [];
   let start = 0;
-  const boundary = /([.!?])(["”')\]]*)\s+(?=[A-ZÁ-Ú0-9"“(\[])/g;
+  const boundary = /([.!?])(["”')\]]*)\s+(?=[A-ZÁ-Ú0-9"“(\[\uE002])/g;
   for (const match of text.matchAll(boundary)) {
     const end = (match.index ?? 0) + match[1].length + match[2].length;
     const before = text.slice(start, match.index ?? 0);

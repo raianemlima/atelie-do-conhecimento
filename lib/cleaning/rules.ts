@@ -1,7 +1,7 @@
 // Definições ÚNICAS de ruído, usadas pelo limpador (para remover) e pelo verificador (para auditar).
 export type NoiseCategory =
   | "watermark" | "file_name" | "page_reference" | "url" | "email" | "social_handle" | "qr_code" | "advertisement"
-  | "source_reference" | "pipeline_mark" | "ai_talk" | "page_number" | "hyphen_break" | "known_term";
+  | "source_reference" | "pipeline_mark" | "professor" | "ai_talk" | "page_number" | "hyphen_break" | "known_term";
 
 export type NoiseRule = { category: NoiseCategory; pattern: RegExp; scope: "inline" | "sentence" | "line" };
 
@@ -33,9 +33,7 @@ export function freshPattern(pattern: RegExp): RegExp {
   return new RegExp(pattern.source, pattern.flags);
 }
 
-// Sinais que PODEM ser ruído de curso ou citação legítima (ex.: "Prof. Fulano" pode ser autor doutrinário).
-// Nunca são removidos por regra: vão para a lista de ambíguos, para decisão da IA/usuária.
-export const REVIEW_RULES: { reason: "possible_professor_mention" | "course_structure_marker"; pattern: RegExp }[] = [
-  { reason: "possible_professor_mention", pattern: /\bProf(?:essor|essora|\.|a\.)\s+[A-ZÁ-Ú][\wÀ-ú]+/ },
+// Sinais que PODEM ser ruído de curso e dependem de decisão: nunca são removidos por regra, vão para a lista de ambíguos.
+export const REVIEW_RULES: { reason: "course_structure_marker"; pattern: RegExp }[] = [
   { reason: "course_structure_marker", pattern: /^(?:aula|m[oó]dulo|ponto|unidade|cap[ií]tulo|parte)\s+\d+\b/i },
 ];

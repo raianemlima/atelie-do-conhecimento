@@ -212,4 +212,10 @@ draw(c, 50, H - 100, wrap("Terceira pagina com texto: a autonomia funcional e ad
 c.showPage()
 c.save()
 
+# 13 - menções a professor e autor doutrinário (opção de manter/remover referências)
+write_pdf("13-professor.pdf", [["ATO ADMINISTRATIVO", ""] + paragraphs(
+    "Segundo o Prof. Fulano de Tal, o ato administrativo vinculado não admite juízo de conveniência.",
+    "A doutrina de Celso Antônio Bandeira de Mello aponta que a discricionariedade tem limites legais.",
+    "O Prof. Fulano de Tal explica que o controle judicial alcança a legalidade do ato.")])
+
 print("Corpus gerado em", OUT)

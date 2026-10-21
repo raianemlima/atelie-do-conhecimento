@@ -68,7 +68,7 @@ describe("conservadorismo: texto jurídico legítimo nunca é removido", () => {
     "A sentença foi proferida conforme o material probatório constante dos autos.",
     "Segundo o curso natural do processo, o recurso será apreciado pelo tribunal.",
     "O acesso à justiça é garantia fundamental. Veja o art. 5º, XXXV, da Constituição Federal.",
-    "O Ministro Relator citou a página 12 da petição inicial e o parecer do Prof. Celso Antônio Bandeira de Mello.",
+    "O Ministro Relator citou a página 12 da petição inicial e o parecer de Celso Antônio Bandeira de Mello.",
     "A inscrição no cadastro e a matrícula do imóvel constam do registro público.",
     "Cf. Resp 1.234.567/SP, Rel. Min. Fulano, j. 10/10/2020, DJe 15/10/2020; STF, RE 592.581/RS, Tema 220.",
     "O prazo é de 15 dias (art. 219 do CPC), contados em dias úteis, e a vista aos autos é franqueada.",
@@ -78,11 +78,6 @@ describe("conservadorismo: texto jurídico legítimo nunca é removido", () => {
     expect(result.text).toBe(sentence);
     expect(result.removed).toEqual([]);
     expect(findNoise(sentence)).toEqual([]);
-  });
-  it("citação de autor com 'Prof.' fica no texto e vai para revisão (não é removida por regra)", () => {
-    const result = cleanDocument(doc([block("body", "Para o Prof. Celso Antônio Bandeira de Mello, o ato é vinculado.")]));
-    expect(result.text).toContain("Prof. Celso Antônio Bandeira de Mello");
-    expect(result.ambiguous).toEqual([expect.objectContaining({ reason: "possible_professor_mention" })]);
   });
 });
 

@@ -55,8 +55,10 @@ export type PipelineDeps = {
   // Bytes do arquivo original (o texto extraído no navegador não é confiável). Ausente = não disponível.
   loadOriginal?(id: string): Promise<Uint8Array | null>;
   ocr?: import("@/lib/extraction/types").OcrProvider;
-  // Termos de marca/curso/professor conhecidos, removidos do corpo do texto (lista da usuária por caderno).
+  // Opções de limpeza do caderno (lista da usuária).
   knownTerms?: string[];
+  keepReferences?: string[];
+  keepProfessors?: boolean;
 };
 
 export type StageResult = { output: Json; tokensIn?: number; tokensOut?: number; costUsd?: number };

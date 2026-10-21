@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { CleaningSettings } from "@/lib/pipeline/options";
 import type { JobRow, JobStatus, Json, PipelineDeps, PipelineDocument, PipelineRepository, PlannedStage, StageName, StageRow } from "@/lib/pipeline/types";
 
 type JobDb = { id: string; notebook_id: string; kind: string; status: JobStatus; input_hash: string; error: string | null; created_at: string; updated_at: string; finished_at: string | null };
@@ -95,8 +96,11 @@ export class SupabasePipelineRepository implements PipelineRepository {
   }
 }
 
-export function supabasePipelineDeps(supabase: SupabaseClient): PipelineDeps {
+export function supabasePipelineDeps(supabase: SupabaseClient, settings?: CleaningSettings): PipelineDeps {
   return {
+    knownTerms: settings?.knownTerms,
+    keepReferences: settings?.keepReferences,
+    keepProfessors: settings?.keepProfessors,
     async loadDocument(id: string): Promise<PipelineDocument | null> {
       const { data, error } = await supabase.from("documents").select("id, format, sha256, extraction_status, page_texts, page_count").eq("id", id).maybeSingle();
       check(error, "Falha ao carregar o documento");
