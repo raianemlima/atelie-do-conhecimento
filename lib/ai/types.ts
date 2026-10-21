@@ -15,4 +15,5 @@ export interface AiProvider {
   generate(request: AiRequest): Promise<AiResponse>;
 }
 
-export type AiBudget = { maxCostUsd: number; maxTokensPerCall: number };
+// pricing: quando informado, o custo é estimado ANTES de qualquer chamada e a etapa recusa rodar se a estimativa passar do teto.
+export type AiBudget = { maxCostUsd: number; maxTokensPerCall: number; pricing?: import("@/lib/ai/estimate").Pricing };
