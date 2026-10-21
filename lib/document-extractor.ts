@@ -1,5 +1,6 @@
 import type { DocumentFormat, ExtractionStatus } from "@/lib/document-types";
 import JSZip from "jszip";
+import { cleanDocumentText } from "@/lib/text-cleaner";
 
 export type ExtractionResult = {
   extractedText: string;
@@ -28,13 +29,14 @@ async function extractDocx(buffer: ArrayBuffer): Promise<ExtractionResult> {
   const entry = zip.file("word/document.xml");
   if (!entry) return { extractedText: "", pageTexts: [""], pageCount: 1, status: "failed" };
   const xml = await entry.async("text");
-  const text = xml
+  const rawText = xml
     .replace(/<\/w:p>/g, "\n\n")
     .replace(/<w:tab\s*\/>/g, "\t")
     .replace(/<w:br\s*\/>/g, "\n")
     .replace(/<[^>]+>/g, "")
     .replace(/&(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-f]+);/gi, (entity) => decodeXmlEntities(entity))
     .replace(/\n{3,}/g, "\n\n").trim();
+  const text = cleanDocumentText(rawText);
   return { extractedText: text, pageTexts: [text], pageCount: 1, status: text ? "text" : "no-text" };
 }
 
@@ -63,24 +65,25 @@ async function extractPdf(buffer: ArrayBuffer): Promise<ExtractionResult> {
       line.push({ x, text: item.str });
       lines.set(lineKey, line);
     });
-    const pageText = [...lines.entries()]
+    const rawPageText = [...lines.entries()]
       .sort(([first], [second]) => second - first)
       .map(([, line]) => line.sort((first, second) => first.x - second.x).map((item) => item.text).join(" ").replace(/\s+/g, " ").trim())
       .filter(Boolean)
       .join("\n")
       .trim();
+    const pageText = cleanDocumentText(rawPageText);
     pageTexts.push(pageText);
     page.cleanup();
   }
 
   await loadingTask.destroy();
-  const extractedText = pageTexts.map((text, index) => `\n[ Página ${index + 1} ]\n${text}`).join("\n").trim();
+  const extractedText = cleanDocumentText(pageTexts.join("\n\n"), pageTexts);
   return { extractedText, pageTexts, pageCount, status: extractedText ? "text" : "no-text" };
 }
 
 export async function extractDocumentText(file: Blob, format: DocumentFormat): Promise<ExtractionResult> {
   if (format === "pdf") return extractPdf(await file.arrayBuffer());
   if (format === "docx") return extractDocx(await file.arrayBuffer());
-  const extractedText = decodeText(await file.arrayBuffer());
+  const extractedText = cleanDocumentText(decodeText(await file.arrayBuffer()));
   return { extractedText, pageTexts: [extractedText], pageCount: 1, status: extractedText.trim() ? "text" : "no-text" };
 }
