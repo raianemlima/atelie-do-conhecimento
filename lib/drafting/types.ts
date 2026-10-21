@@ -4,7 +4,8 @@ export type BlockType = (typeof BLOCK_TYPES)[number];
 export type DraftBlock = { type: BlockType; heading: string; paragraphs: string[]; table?: { headers: string[]; rows: string[][] } };
 
 // Representação intermediária de um tema redigido (base da verificação e da exportação).
-export type ThemeDraft = { title: string; blocks: DraftBlock[]; citationsUsed: string[] };
+export type GlossaryTerm = { term: string; definition: string };
+export type ThemeDraft = { title: string; blocks: DraftBlock[]; citationsUsed: string[]; glossary?: GlossaryTerm[] };
 
 export type DraftSource = { segmentId: string; text: string };
 export type DraftCitation = { key: string; label: string; statements: string[] };

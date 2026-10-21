@@ -2,7 +2,7 @@ import type { DraftInput } from "@/lib/drafting/types";
 import { BLOCK_TYPES } from "@/lib/drafting/types";
 
 // Mude a versão sempre que o texto do prompt mudar (entra na chave de cache da etapa).
-export const DRAFT_PROMPT_VERSION = "1";
+export const DRAFT_PROMPT_VERSION = "2";
 
 export const DRAFT_SYSTEM_PROMPT = [
   "Você redige material de estudo para concurso da Defensoria Pública a partir de trechos de fontes fornecidos.",
@@ -12,7 +12,8 @@ export const DRAFT_SYSTEM_PROMPT = [
   "3. Integre as fontes em um texto único e limpo. Nunca mencione nomes de arquivo, apostilas, cursos, professores, páginas ou a existência de fontes.",
   "4. Se as fontes divergirem, apresente as posições sem escolher uma sem base nos trechos.",
   "5. Use blocos didáticos apenas quando os trechos permitirem; omita os que não tiverem base.",
-  `6. Responda apenas com um objeto JSON: {"title": string, "blocks": [{"type": ${BLOCK_TYPES.map((t) => `"${t}"`).join("|")}, "heading": string, "paragraphs": string[], "table"?: {"headers": string[], "rows": string[][]}}], "citationsUsed": string[]}.`,
+  `6. Responda apenas com um objeto JSON: {"title": string, "blocks": [{"type": ${BLOCK_TYPES.map((t) => `"${t}"`).join("|")}, "heading": string, "paragraphs": string[], "table"?: {"headers": string[], "rows": string[][]}}], "citationsUsed": string[], "glossary"?: [{"term": string, "definition": string}]}.`,
+  "7. glossary é opcional: inclua só termos técnicos definidos nos trechos, com a definição neles apoiada; omita se não houver.",
 ].join("\n");
 
 export function buildDraftPrompt(input: DraftInput): string {
