@@ -1,0 +1,233 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`extração de PDF — comportamento atual > 01-texto-simples.pdf: texto, páginas e status 1`] = `
+{
+  "extractedText": "DEFENSORIA PÚBLICA: NOÇÕES INICIAIS
+A Defensoria Pública presta orientação jurídica e defesa dos necessitados em todos os
+graus.
+Art. 134. A Defensoria Pública é instituição permanente, essencial à função
+jurisdicional do Estado, incumbindo-lhe, como expressão e instrumento do regime
+democrático, fundamentalmente, a orientação jurídica, a promoção dos direitos humanos e
+a defesa, em todos os graus, judicial e extrajudicial, dos direitos individuais e
+coletivos, de forma integral e gratuita, aos necessitados, na forma do inciso LXXIV do
+art. 5º desta Constituição Federal.
+
+FUNÇÃO ESSENCIAL À JUSTIÇA
+A instituição atua de forma integral e gratuita, em favor de quem comprove insuficiência
+de recursos.
+Art. 5º, LXXIV - o Estado prestará assistência jurídica integral e gratuita aos que
+comprovarem insuficiência de recursos;",
+  "pageCount": 2,
+  "pageTexts": [
+    "DEFENSORIA PÚBLICA: NOÇÕES INICIAIS
+A Defensoria Pública presta orientação jurídica e defesa dos necessitados em todos os
+graus.
+Art. 134. A Defensoria Pública é instituição permanente, essencial à função
+jurisdicional do Estado, incumbindo-lhe, como expressão e instrumento do regime
+democrático, fundamentalmente, a orientação jurídica, a promoção dos direitos humanos e
+a defesa, em todos os graus, judicial e extrajudicial, dos direitos individuais e
+coletivos, de forma integral e gratuita, aos necessitados, na forma do inciso LXXIV do
+art. 5º desta Constituição Federal.",
+    "FUNÇÃO ESSENCIAL À JUSTIÇA
+A instituição atua de forma integral e gratuita, em favor de quem comprove insuficiência
+de recursos.
+Art. 5º, LXXIV - o Estado prestará assistência jurídica integral e gratuita aos que
+comprovarem insuficiência de recursos;",
+  ],
+  "status": "text",
+}
+`;
+
+exports[`extração de PDF — comportamento atual > 02a-complementar-conceito.pdf: texto, páginas e status 1`] = `
+{
+  "extractedText": "ASSISTÊNCIA JURÍDICA INTEGRAL E GRATUITA
+1. Conceito
+A assistência jurídica integral compreende a orientação, a consultoria e a defesa
+judicial e extrajudicial.
+Art. 5º, LXXIV - o Estado prestará assistência jurídica integral e gratuita aos que
+comprovarem insuficiência de recursos;",
+  "pageCount": 1,
+  "pageTexts": [
+    "ASSISTÊNCIA JURÍDICA INTEGRAL E GRATUITA
+1. Conceito
+A assistência jurídica integral compreende a orientação, a consultoria e a defesa
+judicial e extrajudicial.
+Art. 5º, LXXIV - o Estado prestará assistência jurídica integral e gratuita aos que
+comprovarem insuficiência de recursos;",
+  ],
+  "status": "text",
+}
+`;
+
+exports[`extração de PDF — comportamento atual > 02b-complementar-legitimidade.pdf: texto, páginas e status 1`] = `
+{
+  "extractedText": "ASSISTÊNCIA JURÍDICA INTEGRAL E GRATUITA
+2. Hipossuficiência
+A hipossuficiência abrange a insuficiência econômica e também a vulnerabilidade
+organizacional do assistido.
+A comprovação da insuficiência de recursos orienta o atendimento pela instituição.",
+  "pageCount": 1,
+  "pageTexts": [
+    "ASSISTÊNCIA JURÍDICA INTEGRAL E GRATUITA
+2. Hipossuficiência
+A hipossuficiência abrange a insuficiência econômica e também a vulnerabilidade
+organizacional do assistido.
+A comprovação da insuficiência de recursos orienta o atendimento pela instituição.",
+  ],
+  "status": "text",
+}
+`;
+
+exports[`extração de PDF — comportamento atual > 03a-quase-identico.pdf: texto, páginas e status 1`] = `
+{
+  "extractedText": "PRINCÍPIOS INSTITUCIONAIS
+O princípio da unidade impõe que a instituição atue como um corpo único sob a mesma
+chefia.
+O princípio da indivisibilidade permite a substituição de um membro por outro sem
+solução de continuidade.
+A independência funcional assegura ao membro liberdade de convicção no exercício da
+função.",
+  "pageCount": 1,
+  "pageTexts": [
+    "PRINCÍPIOS INSTITUCIONAIS
+O princípio da unidade impõe que a instituição atue como um corpo único sob a mesma
+chefia.
+O princípio da indivisibilidade permite a substituição de um membro por outro sem
+solução de continuidade.
+A independência funcional assegura ao membro liberdade de convicção no exercício da
+função.",
+  ],
+  "status": "text",
+}
+`;
+
+exports[`extração de PDF — comportamento atual > 03b-quase-identico.pdf: texto, páginas e status 1`] = `
+{
+  "extractedText": "PRINCÍPIOS INSTITUCIONAIS
+O princípio da unidade impõe que a instituição atue como um corpo único sob a mesma
+chefia.
+O princípio da indivisibilidade permite a substituição de um membro por outro sem
+solução de continuidade.
+A independência funcional assegura ao membro liberdade de convicção no exercício da
+função.
+Esses princípios são previstos de forma expressa na legislação orgânica.",
+  "pageCount": 1,
+  "pageTexts": [
+    "PRINCÍPIOS INSTITUCIONAIS
+O princípio da unidade impõe que a instituição atue como um corpo único sob a mesma
+chefia.
+O princípio da indivisibilidade permite a substituição de um membro por outro sem
+solução de continuidade.
+A independência funcional assegura ao membro liberdade de convicção no exercício da
+função.
+Esses princípios são previstos de forma expressa na legislação orgânica.",
+  ],
+  "status": "text",
+}
+`;
+
+exports[`extração de PDF — comportamento atual > 04: DEFEITO CONHECIDO — ruído residual no texto consolidado e nas páginas 1`] = `
+{
+  "extractedText": [
+    "nome de curso",
+    "url",
+    "perfil social",
+    "propaganda",
+    "referência a material",
+    "numeração de página isolada",
+  ],
+  "pageTexts": [
+    "nome de curso",
+    "professor",
+    "url",
+    "perfil social",
+    "propaganda",
+    "referência a material",
+    "numeração de página isolada",
+  ],
+}
+`;
+
+exports[`extração de PDF — comportamento atual > 04-ruidoso.pdf: texto, páginas e status 1`] = `
+{
+  "extractedText": "O Estado prestará assistência jurídica integral e gratuita aos que comprovarem
+insuficiência de recursos, conforme o material do Curso Exemplo, módulo 3.
+A Defensoria Pública é essencial à função jurisdicional do Estado.
+1
+
+A atuação extrajudicial inclui a promoção da conciliação e da mediação entre as partes.
+Acesse www.cursoexemplo.com.br/bonus e baixe o material extra. Siga @cursoexemplo no
+Instagram.
+2
+
+A autonomia funcional e administrativa decorre do texto constitucional e é garantia
+institucional.
+MATRICULE-SE AGORA NO PACOTE COMPLETO COM 30% DE DESCONTO - cursoexemplo.com.br/promo
+3",
+  "pageCount": 3,
+  "pageTexts": [
+    "CURSO EXEMPLO PREPARATÓRIO - Prof. Fulano de Tal -
+Direito Constitucional - Aula 1
+O Estado prestará assistência jurídica integral e gratuita aos que comprovarem
+insuficiência de recursos, conforme o material do Curso Exemplo, módulo 3.
+A Defensoria Pública é essencial à função jurisdicional do Estado.
+1",
+    "CURSO EXEMPLO PREPARATÓRIO - Prof. Fulano de Tal -
+Direito Constitucional - Aula 1
+A atuação extrajudicial inclui a promoção da conciliação e da mediação entre as partes.
+Acesse www.cursoexemplo.com.br/bonus e baixe o material extra. Siga @cursoexemplo no
+Instagram.
+2",
+    "CURSO EXEMPLO PREPARATÓRIO - Prof. Fulano de Tal -
+Direito Constitucional - Aula 1
+A autonomia funcional e administrativa decorre do texto constitucional e é garantia
+institucional.
+MATRICULE-SE AGORA NO PACOTE COMPLETO COM 30% DE DESCONTO - cursoexemplo.com.br/promo
+3",
+  ],
+  "status": "text",
+}
+`;
+
+exports[`extração de PDF — comportamento atual > 05-citacoes.pdf: texto, páginas e status 1`] = `
+{
+  "extractedText": "CITAÇÕES JURÍDICAS PARA CONFERÊNCIA
+Art. 134. A Defensoria Pública é instituição permanente, essencial à função
+jurisdicional do Estado, incumbindo-lhe, como expressão e instrumento do regime
+democrático, fundamentalmente, a orientação jurídica, a promoção dos direitos humanos e
+a defesa, em todos os graus, judicial e extrajudicial, dos direitos individuais e
+coletivos, de forma integral e gratuita, aos necessitados, na forma do inciso LXXIV do
+art. 5º desta Constituição Federal.
+Art. 5º, LXXIV - o Estado prestará assistência jurídica integral e gratuita aos que
+comprovarem insuficiência de recursos;
+Súmula 421 do STJ: Os honorários advocatícios não são devidos à Defensoria Pública
+quando ela atua contra a pessoa jurídica de direito público à qual pertence.
+REsp 0000000/XX (julgado fictício), Rel. Min. Exemplo, Segunda Turma, julgado em
+01/01/2020 - Tese fictícia para teste de preservação.
+Segundo Autor Exemplo, Manual Fictício de Processo, p. 123, a instituição é expressão do
+regime democrático.",
+  "pageCount": 1,
+  "pageTexts": [
+    "CITAÇÕES JURÍDICAS PARA CONFERÊNCIA
+Art. 134. A Defensoria Pública é instituição permanente, essencial à função
+jurisdicional do Estado, incumbindo-lhe, como expressão e instrumento do regime
+democrático, fundamentalmente, a orientação jurídica, a promoção dos direitos humanos e
+a defesa, em todos os graus, judicial e extrajudicial, dos direitos individuais e
+coletivos, de forma integral e gratuita, aos necessitados, na forma do inciso LXXIV do
+art. 5º desta Constituição Federal.
+Art. 5º, LXXIV - o Estado prestará assistência jurídica integral e gratuita aos que
+comprovarem insuficiência de recursos;
+Súmula 421 do STJ: Os honorários advocatícios não são devidos à Defensoria Pública
+quando ela atua contra a pessoa jurídica de direito público à qual pertence.
+REsp 0000000/XX (julgado fictício), Rel. Min. Exemplo, Segunda Turma, julgado em
+01/01/2020 - Tese fictícia para teste de preservação.
+Segundo Autor Exemplo, Manual Fictício de Processo, p. 123, a instituição é expressão do
+regime democrático.",
+  ],
+  "status": "text",
+}
+`;
+
+exports[`extração de PDF — comportamento atual > 07: PDF corrompido rejeita a extração 1`] = `[InvalidPDFException: Invalid PDF structure.]`;
+
+exports[`extração de PDF — comportamento atual > 08: PDF protegido por senha rejeita a extração 1`] = `[PasswordException: No password given]`;
