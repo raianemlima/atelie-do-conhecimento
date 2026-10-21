@@ -9,6 +9,8 @@ import { draftTheme } from "@/lib/drafting/draft";
 import { buildDraftInputs } from "@/lib/drafting/inputs";
 import type { CitationRegistry } from "@/lib/citations/types";
 import type { ThematicMap } from "@/lib/thematic/types";
+import { verifyDrafts } from "@/lib/verification/verify";
+import type { ThemeDraftResult } from "@/lib/drafting/types";
 import { buildThematicMap } from "@/lib/thematic/build";
 import { sha256 } from "@/lib/pipeline/hash";
 import { settingsKey } from "@/lib/pipeline/options";
@@ -155,6 +157,29 @@ export const draftingHandler: StageHandler = {
   },
 };
 
+// Fase 7: verificação automática. Saída abaixo do mínimo (ou com problema bloqueante) faz a etapa falhar: nunca é "concluída".
+export const verificationHandler: StageHandler = {
+  stage: "verification",
+  scope: "notebook",
+  version: "1",
+  cache: false,
+  inputKey({ stages }) {
+    return sha256(JSON.stringify(previousOutput(stages, "drafting", null)));
+  },
+  run({ stages }) {
+    const drafting = previousOutput(stages, "drafting", null);
+    if (drafting.skipped === true) return Promise.resolve({ output: { skipped: true } });
+    const map = previousOutput(stages, "thematic_map", null).map as unknown as ThematicMap;
+    const registry = previousOutput(stages, "citation_registry", null) as unknown as CitationRegistry;
+    const { report, drafts } = verifyDrafts({ drafts: drafting.themes as unknown as ThemeDraftResult[], map, registry, segmentations: segmentationsOf(stages).map((row) => row.output as unknown as SegmentationResult) });
+    if (!report.passed) {
+      const blocking = report.findings.filter((finding) => finding.severity === "bloqueante").slice(0, 5).map((finding) => finding.message).join(" ");
+      throw new StageError(`Qualidade abaixo do mínimo (nota ${report.score}/${report.minScore}). ${blocking}`.trim(), false);
+    }
+    return Promise.resolve({ output: { skipped: false, report, drafts } as unknown as Json });
+  },
+};
+
 // ---------------------------------------------------------------------------------------------------------------
 // Fluxo da Fase 2 (texto extraído no navegador + limpador antigo). Mantido para os testes de caracterização.
 // ---------------------------------------------------------------------------------------------------------------
@@ -195,5 +220,5 @@ export const cleaningHandler: StageHandler = {
 };
 
 export const LEGACY_HANDLERS: StageHandler[] = [extractionHandler, cleaningHandler];
-export const AI_HANDLERS: StageHandler[] = [extractionHandlerV2, cleaningHandlerV2, segmentationHandler, thematicMapHandler, citationRegistryHandler, draftingHandler];
+export const AI_HANDLERS: StageHandler[] = [extractionHandlerV2, cleaningHandlerV2, segmentationHandler, thematicMapHandler, citationRegistryHandler, draftingHandler, verificationHandler];
 export const DEFAULT_HANDLERS: StageHandler[] = [extractionHandlerV2, cleaningHandlerV2, segmentationHandler, thematicMapHandler, citationRegistryHandler];
