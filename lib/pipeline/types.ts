@@ -63,6 +63,8 @@ export type PipelineDeps = {
   // Disciplina do caderno (raiz do mapa temático) e onde guardar as versões do mapa.
   discipline?: string;
   mapStore?: import("@/lib/thematic/store").ThematicMapStore;
+  // Provedor de IA e teto de custo. Ausente = etapas de IA são puladas (nenhuma chamada real é feita).
+  ai?: { provider: import("@/lib/ai/types").AiProvider; budget: import("@/lib/ai/types").AiBudget };
 };
 
 export type StageResult = { output: Json; tokensIn?: number; tokensOut?: number; costUsd?: number };

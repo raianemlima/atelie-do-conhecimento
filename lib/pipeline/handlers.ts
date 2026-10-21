@@ -4,6 +4,11 @@ import { extractOriginal, ExtractionError, type DocumentExtraction } from "@/lib
 import { segmentDocument } from "@/lib/segmentation/segment";
 import type { SegmentationResult } from "@/lib/segmentation/types";
 import { buildCitationRegistry } from "@/lib/citations/registry";
+import { DRAFT_PROMPT_VERSION } from "@/lib/drafting/prompt";
+import { draftTheme } from "@/lib/drafting/draft";
+import { buildDraftInputs } from "@/lib/drafting/inputs";
+import type { CitationRegistry } from "@/lib/citations/types";
+import type { ThematicMap } from "@/lib/thematic/types";
 import { buildThematicMap } from "@/lib/thematic/build";
 import { sha256 } from "@/lib/pipeline/hash";
 import { settingsKey } from "@/lib/pipeline/options";
@@ -123,6 +128,33 @@ export const citationRegistryHandler: StageHandler = {
   },
 };
 
+// Fase 6: redação por tema com IA. Sem provedor configurado a etapa é pulada; com provedor, respeita o teto de custo.
+export const draftingHandler: StageHandler = {
+  stage: "drafting",
+  scope: "notebook",
+  version: DRAFT_PROMPT_VERSION,
+  cache: false,
+  inputKey({ stages, deps }) {
+    return sha256(JSON.stringify({ provider: deps.ai?.provider.id ?? null, budget: deps.ai?.budget ?? null, map: previousOutput(stages, "thematic_map", null).map }));
+  },
+  async run({ stages, deps }) {
+    if (!deps.ai) return { output: { skipped: true, reason: "Nenhum provedor de IA configurado.", themes: [] } };
+    const map = previousOutput(stages, "thematic_map", null).map as unknown as ThematicMap;
+    const registry = previousOutput(stages, "citation_registry", null) as unknown as CitationRegistry;
+    const inputs = buildDraftInputs(map, segmentationsOf(stages).map((row) => row.output as unknown as SegmentationResult), registry);
+    const themes = [];
+    let tokensIn = 0, tokensOut = 0, costUsd = 0;
+    for (const input of inputs) {
+      if (costUsd >= deps.ai.budget.maxCostUsd) throw new StageError(`Teto de custo atingido antes de concluir todos os temas (${themes.length} de ${inputs.length} redigidos).`, false);
+      const result = await draftTheme(deps.ai.provider, input, { maxTokens: deps.ai.budget.maxTokensPerCall });
+      tokensIn += result.tokensIn; tokensOut += result.tokensOut; costUsd += result.costUsd;
+      if (!result.draft) throw new StageError(`Não foi possível redigir o tema "${input.title}": ${result.error ?? "erro desconhecido"}`, false);
+      themes.push(result);
+    }
+    return { output: { skipped: false, themes } as unknown as Json, tokensIn, tokensOut, costUsd };
+  },
+};
+
 // ---------------------------------------------------------------------------------------------------------------
 // Fluxo da Fase 2 (texto extraído no navegador + limpador antigo). Mantido para os testes de caracterização.
 // ---------------------------------------------------------------------------------------------------------------
@@ -163,4 +195,5 @@ export const cleaningHandler: StageHandler = {
 };
 
 export const LEGACY_HANDLERS: StageHandler[] = [extractionHandler, cleaningHandler];
+export const AI_HANDLERS: StageHandler[] = [extractionHandlerV2, cleaningHandlerV2, segmentationHandler, thematicMapHandler, citationRegistryHandler, draftingHandler];
 export const DEFAULT_HANDLERS: StageHandler[] = [extractionHandlerV2, cleaningHandlerV2, segmentationHandler, thematicMapHandler, citationRegistryHandler];
