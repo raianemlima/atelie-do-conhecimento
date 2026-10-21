@@ -89,10 +89,10 @@ describe("ciclo completo via API", () => {
     const created = await createJob(post({ name: "Caderno teste", documentIds: [D1, D2, D1] }));
     expect(created.status).toBe(201);
     const { view } = await created.json();
-    expect(view.progress).toMatchObject({ done: 0, total: 4, percent: 0 });
+    expect(view.progress).toMatchObject({ done: 0, total: 7, percent: 0 });
     expect(db.tables.notebook_sources).toHaveLength(2);
     const { kinds, body } = await drive(view.job.id);
-    expect(kinds).toEqual(["progressed", "progressed", "progressed", "progressed", "done"]);
+    expect(kinds).toEqual(["progressed", "progressed", "progressed", "progressed", "progressed", "progressed", "progressed", "done"]);
     expect(body.view.job.status).toBe("succeeded");
     expect(body.view.progress.percent).toBe(100);
   });
@@ -113,7 +113,7 @@ describe("ciclo completo via API", () => {
     const again = await createJob(post({ notebookId: db.tables.notebooks[0].id }));
     expect(again.status).toBe(200);
     expect((await again.json()).view.job.id).toBe(first.view.job.id);
-    expect(db.tables.job_stages).toHaveLength(2);
+    expect(db.tables.job_stages).toHaveLength(4);
   });
   it("RECARREGAR a página no meio: lista jobs ativos e continua de onde parou, sem refazer etapas", async () => {
     seedDocument(D1, "h1"); seedDocument(D2, "h2");
@@ -127,9 +127,9 @@ describe("ciclo completo via API", () => {
     login();
     const active = await (await listJobs(new Request("http://x/api/jobs?active=1"))).json();
     expect(active.jobs).toHaveLength(1);
-    expect(active.jobs[0].progress).toMatchObject({ done: 2, total: 4 });
+    expect(active.jobs[0].progress).toMatchObject({ done: 2, total: 7 });
     const { kinds } = await drive(active.jobs[0].job.id);
-    expect(kinds).toEqual(["progressed", "progressed", "done"]);
+    expect(kinds).toEqual(["progressed", "progressed", "progressed", "progressed", "progressed", "done"]);
     expect(db.tables.job_stages.filter((s) => doneBefore.includes(s.id)).every((s) => s.attempts === 1)).toBe(true);
   });
   it("lista só jobs ativos quando active=1 e isola usuários", async () => {
@@ -152,7 +152,7 @@ describe("ciclo completo via API", () => {
     const second = await (await createJob(post({ name: "dois", documentIds: [D1] }))).json();
     expect(second.view.job.id).not.toBe(first.view.job.id);
     const { body } = await drive(second.view.job.id);
-    expect(body.view.stages.every((s: { cacheHit: boolean }) => s.cacheHit)).toBe(true);
+    expect(body.view.stages.filter((s: { stage: string }) => s.stage !== "thematic_map").every((s: { cacheHit: boolean }) => s.cacheHit)).toBe(true);
   });
   it("falha clara (sem retentativa) quando o arquivo original não está no armazenamento", async () => {
     seedDocument(D1, "h1", USER, false);

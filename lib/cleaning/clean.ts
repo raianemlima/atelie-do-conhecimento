@@ -5,7 +5,7 @@ import { splitSentences } from "@/lib/cleaning/sentences";
 import { collapseSpaces, joinLines } from "@/lib/extraction/text-utils";
 import type { DocumentExtraction, LayoutBlock } from "@/lib/extraction/types";
 
-export const CLEANER_VERSION = "3";
+export const CLEANER_VERSION = "4";
 const MAX_SAMPLES = 100;
 
 export type CleanOptions = {
@@ -17,7 +17,7 @@ export type CleanOptions = {
   professors?: "remove" | "keep";
 };
 type Policy = { knownTerms: RegExp[]; keepReferences: string[]; removeProfessors: boolean };
-export type CleanParagraph = { text: string; pages: number[]; kind: "body" | "table" | "footnote"; heading: boolean };
+export type CleanParagraph = { text: string; pages: number[]; kind: "body" | "table" | "footnote"; heading: boolean; fontSize: number };
 export type AmbiguousItem = { reason: "repeated_short_text" | "course_structure_marker" | "unique_header_footer_text"; text: string; pages: number[] };
 export type RemovalSample = { category: string; page: number; text: string };
 export type CleaningResult = {
@@ -142,13 +142,13 @@ export function cleanDocument(extraction: DocumentExtraction, options: CleanOpti
     if (lineRules.some((rule) => test(rule, block.text))) { recorder.add("page_number", page, block.text); continue; }
     if (block.kind === "table") {
       const rows = block.text.split("\n").map((row) => cleanText(row, page, recorder, policy).replace(/^\|\s*|\s*\|$/g, "")).filter(hasContent);
-      if (rows.length) paragraphs.push({ text: rows.join("\n"), pages: [page], kind: "table", heading: false });
+      if (rows.length) paragraphs.push({ text: rows.join("\n"), pages: [page], kind: "table", heading: false, fontSize: block.fontSize });
       continue;
     }
     const text = cleanText(block.text, page, recorder, policy);
     if (!hasContent(text)) continue;
     if (zone && !block.heading && text.length <= 60) ambiguous.push({ reason: "unique_header_footer_text", text, pages: [page] });
-    paragraphs.push({ text, pages: [page], kind: block.kind === "footnote" ? "footnote" : "body", heading: block.heading });
+    paragraphs.push({ text, pages: [page], kind: block.kind === "footnote" ? "footnote" : "body", heading: block.heading, fontSize: block.fontSize });
   }
 
   const merged: CleanParagraph[] = [];

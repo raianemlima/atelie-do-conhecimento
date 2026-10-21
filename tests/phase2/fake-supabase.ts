@@ -4,7 +4,7 @@ type Row = Record<string, unknown>;
 type Result = { data: unknown; error: { message: string; code?: string } | null };
 
 export class FakeDb {
-  tables: Record<string, Row[]> = { documents: [], notebooks: [], notebook_sources: [], jobs: [], job_stages: [], stage_cache: [] };
+  tables: Record<string, Row[]> = { documents: [], notebooks: [], notebook_sources: [], jobs: [], job_stages: [], stage_cache: [], thematic_maps: [] };
   clock = () => Date.now();
   objects = new Map<string, Uint8Array>();
 }
@@ -88,16 +88,35 @@ export function makeFakeSupabase(db: FakeDb, userId: string) {
       }),
     },
     // Mesma semântica da função SQL public.claim_next_stage.
-    rpc: async (name: string, args: { p_job_id: string; p_lease_seconds: number }) => {
+    rpc: async (name: string, args: Record<string, unknown>) => {
+      // Mesma semântica das funções SQL public.save_thematic_map / confirm_thematic_map (validadas em Postgres real).
+      if (name === "save_thematic_map") {
+        const maps = db.tables.thematic_maps.filter((row) => row.owner_id === userId && row.notebook_id === args.p_notebook_id);
+        if (args.p_source_job_id) { const existing = maps.find((row) => row.source_job_id === args.p_source_job_id); if (existing) return { data: { ...existing }, error: null }; }
+        const latest = Math.max(0, ...maps.map((row) => row.version as number));
+        if (args.p_expected_latest !== null && args.p_expected_latest !== latest) return { data: null, error: { message: "stale_map" } };
+        const row: Row = { id: randomUUID(), owner_id: userId, notebook_id: args.p_notebook_id, source_job_id: args.p_source_job_id, version: latest + 1, base_version: args.p_base_version, origin: args.p_origin, status: "draft", confirmed_at: null, discipline: args.p_discipline ?? "", map: structuredClone(args.p_map), change_log: structuredClone(args.p_change_log ?? []), created_at: new Date(db.clock()).toISOString() };
+        db.tables.thematic_maps.push(row);
+        return { data: { ...row }, error: null };
+      }
+      if (name === "confirm_thematic_map") {
+        const maps = db.tables.thematic_maps.filter((row) => row.owner_id === userId && row.notebook_id === args.p_notebook_id);
+        const target = maps.find((row) => row.version === args.p_version);
+        if (!target) return { data: null, error: { message: "map_not_found" } };
+        maps.forEach((row) => { if (row.status === "confirmed") Object.assign(row, { status: "draft", confirmed_at: null }); });
+        Object.assign(target, { status: "confirmed", confirmed_at: new Date(db.clock()).toISOString() });
+        return { data: { ...target }, error: null };
+      }
       if (name !== "claim_next_stage") return { data: null, error: { message: `rpc desconhecida: ${name}` } };
+      args = args as { p_job_id: string; p_lease_seconds: number };
       const now = db.clock();
-      const candidate = db.tables.job_stages.filter((s) => s.owner_id === userId && s.job_id === args.p_job_id && !["succeeded", "skipped"].includes(s.status as string)).sort((a, b) => (a.position as number) - (b.position as number))[0];
+      const candidate = db.tables.job_stages.filter((s) => s.owner_id === userId && s.job_id === (args as { p_job_id: string }).p_job_id && !["succeeded", "skipped"].includes(s.status as string)).sort((a, b) => (a.position as number) - (b.position as number))[0];
       if (!candidate) return { data: [], error: null };
       const lease = candidate.lease_expires_at ? Date.parse(candidate.lease_expires_at as string) : null;
       const expired = candidate.status === "running" && lease !== null && lease < now;
       if (expired && (candidate.attempts as number) >= (candidate.max_attempts as number)) { Object.assign(candidate, { status: "failed", error: "A etapa foi interrompida e esgotou as tentativas.", lease_expires_at: null }); return { data: [], error: null }; }
       if ((candidate.status === "pending" && Date.parse(candidate.next_attempt_at as string) <= now) || expired) {
-        Object.assign(candidate, { status: "running", attempts: (candidate.attempts as number) + 1, started_at: candidate.started_at ?? new Date(now).toISOString(), lease_expires_at: new Date(now + args.p_lease_seconds * 1000).toISOString() });
+        Object.assign(candidate, { status: "running", attempts: (candidate.attempts as number) + 1, started_at: candidate.started_at ?? new Date(now).toISOString(), lease_expires_at: new Date(now + (args as { p_lease_seconds: number }).p_lease_seconds * 1000).toISOString() });
         return { data: [{ ...candidate }], error: null };
       }
       return { data: [], error: null };

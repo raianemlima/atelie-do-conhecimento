@@ -81,6 +81,15 @@ function splitIntoStreams(lines: Line[], gutter: Gutter | null): Segment[] {
   return segments;
 }
 
+function lowerQuartile(values: number[]): number {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((x, y) => x - y);
+  return sorted[Math.floor((sorted.length - 1) * 0.25)];
+}
+
+// Itens que abrem um parágrafo próprio em texto jurídico e em listas, mesmo sem espaço extra entre as linhas.
+const NEW_ITEM = /^(?:Art(?:igos?)?\.?\s*\d|§|Par[áa]grafo\s+[úu]nico|[IVXLC]{1,6}\s*[-–—)]\s|[a-z]\)\s|\d{1,2}(?:\.\d{1,2})*[.)]\s+\p{Lu})/u;
+
 const isTabular = (line: Line) => line.cells.length >= 2 && line.cells.every((cell) => cell.text.length <= 40);
 const sameColumns = (a: Line, b: Line) => a.cells.filter((cell) => b.cells.some((other) => Math.abs(other.x0 - cell.x0) <= 4)).length >= 2;
 
@@ -89,7 +98,8 @@ type Piece = { kind: "paragraph" | "table"; lines: Line[]; column: 0 | 1 | null 
 function groupPieces(segment: Segment): Piece[] {
   const pieces: Piece[] = [];
   const lines = segment.lines;
-  const spacing = median(lines.slice(1).map((line, i) => lines[i].y - line.y).filter((gap) => gap > 0));
+  // Quartil inferior (não a mediana): quando a maioria dos parágrafos tem uma linha só, a mediana vira o espaço entre parágrafos.
+  const spacing = lowerQuartile(lines.slice(1).map((line, i) => lines[i].y - line.y).filter((gap) => gap > 0));
   let current: Piece | null = null;
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
@@ -102,7 +112,7 @@ function groupPieces(segment: Segment): Piece[] {
     }
     const gap = previous ? previous.y - line.y : 0;
     const fontShift = previous ? Math.abs(previous.fontSize - line.fontSize) / Math.max(previous.fontSize, 1) > 0.15 : false;
-    const startsNew = !current || current.kind === "table" || gap > Math.max(spacing * 1.45, line.fontSize * 1.9) || fontShift;
+    const startsNew = !current || current.kind === "table" || gap > Math.max(spacing * 1.3, line.fontSize * 1.45) || fontShift || (previous !== undefined && NEW_ITEM.test(line.text));
     if (startsNew) { current = { kind: "paragraph", lines: [line], column: segment.column }; pieces.push(current); }
     else current?.lines.push(line);
   }

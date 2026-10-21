@@ -63,7 +63,7 @@ export async function advanceJob(repo: PipelineRepository, handlers: StageHandle
   const context = { job, stage: claimed, stages, deps };
   try {
     const inputHash = stageInputHash(handler.stage, handler.version, await handler.inputKey(context));
-    const cached = await repo.getCached(handler.stage, inputHash);
+    const cached = handler.cache === false ? null : await repo.getCached(handler.stage, inputHash);
     if (cached !== null) {
       await repo.completeStage(claimed.id, { output: cached, inputHash, cacheHit: true, durationMs: 0, tokensIn: 0, tokensOut: 0, costUsd: 0 });
       options.log?.({ jobId, stage: claimed.stage, subjectId: claimed.subjectId, status: "cache-hit", attempt: claimed.attempts, durationMs: 0, tokensIn: 0, tokensOut: 0, costUsd: 0 });
@@ -73,7 +73,7 @@ export async function advanceJob(repo: PipelineRepository, handlers: StageHandle
     if (!isJson(result?.output)) throw new StageError("A etapa devolveu uma saída inválida ou vazia.", true);
     const durationMs = Date.now() - started;
     const usage = { tokensIn: result.tokensIn ?? 0, tokensOut: result.tokensOut ?? 0, costUsd: result.costUsd ?? 0 };
-    await repo.putCached(handler.stage, inputHash, result.output);
+    if (handler.cache !== false) await repo.putCached(handler.stage, inputHash, result.output);
     await repo.completeStage(claimed.id, { output: result.output, inputHash, cacheHit: false, durationMs, ...usage });
     options.log?.({ jobId, stage: claimed.stage, subjectId: claimed.subjectId, status: "ok", attempt: claimed.attempts, durationMs, ...usage });
     return { kind: "progressed", stage: claimed.stage, subjectId: claimed.subjectId, cacheHit: false };

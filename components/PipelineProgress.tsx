@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { STAGE_LABELS, type JobView, type PublicStage } from "@/lib/pipeline/dto";
 import { advanceJobStep, listActiveJobs, startJob } from "@/lib/pipeline/client";
 import { parseCleaningSettings } from "@/lib/pipeline/options";
+import { ThematicMapPanel } from "@/components/ThematicMapPanel";
 
 const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
@@ -25,6 +26,7 @@ export function PipelineProgress({ documentIds, defaultName }: { documentIds: st
   const [name, setName] = useState(defaultName);
   const [message, setMessage] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [discipline, setDiscipline] = useState("");
   const [termsText, setTermsText] = useState("");
   const [keepText, setKeepText] = useState("");
   const [keepProfessors, setKeepProfessors] = useState(false);
@@ -61,7 +63,7 @@ export function PipelineProgress({ documentIds, defaultName }: { documentIds: st
     setMessage(null);
     try {
       const options = parseCleaningSettings({ knownTerms: termsText.split(/\n/), keepReferences: keepText.split(/\n/), keepProfessors });
-      const { view: created } = await startJob({ name: name.trim(), documentIds, options });
+      const { view: created } = await startJob({ name: name.trim(), discipline: discipline.trim() || undefined, documentIds, options });
       setView(created);
       if (created.job.status === "queued" || created.job.status === "running") void drive(created.job.id);
     } catch (error) {
@@ -72,9 +74,9 @@ export function PipelineProgress({ documentIds, defaultName }: { documentIds: st
   }
 
   const active = view && (view.job.status === "queued" || view.job.status === "running");
-  return <section className="panel pipeline-panel" aria-live="polite">
+  return <><section className="panel pipeline-panel" aria-live="polite">
     <div className="pipeline-head"><div><p className="eyebrow">NOVO PIPELINE · EM TESTE</p><h2>Montar caderno</h2><p>Processa os {documentIds.length} documento(s) do filtro atual em etapas curtas, com retomada automática.</p></div>
-      <div className="pipeline-start"><input aria-label="Nome do caderno" value={name} onChange={(event) => setName(event.target.value)} maxLength={200} /><button className="button primary" onClick={start} disabled={starting || Boolean(active) || !documentIds.length || !name.trim()}>{starting ? "Iniciando…" : "Processar"}</button></div></div>
+      <div className="pipeline-start"><input aria-label="Disciplina" value={discipline} onChange={(event) => setDiscipline(event.target.value)} maxLength={200} placeholder="Disciplina (opcional)" /><input aria-label="Nome do caderno" value={name} onChange={(event) => setName(event.target.value)} maxLength={200} /><button className="button primary" onClick={start} disabled={starting || Boolean(active) || !documentIds.length || !name.trim()}>{starting ? "Iniciando…" : "Processar"}</button></div></div>
     <details className="pipeline-options"><summary>Opções de limpeza</summary>
       <p className="option-hint">Valem para o caderno criado ao clicar em Processar. Por padrão, o texto final não cita professores nem nomes de curso encontrados em cabeçalhos e rodapés.</p>
       <div className="option-grid">
@@ -88,5 +90,7 @@ export function PipelineProgress({ documentIds, defaultName }: { documentIds: st
       <p className="pipeline-summary">{view.job.status === "succeeded" ? "Concluído" : view.job.status === "failed" ? "Falhou" : "Em andamento"} · {view.progress.done} de {view.progress.total} etapas ({view.progress.percent}%)</p>
       <ul className="stage-list">{groupStages(view.stages).map((group) => <li key={group.stage} className={`stage-row ${group.state}`}><span className="stage-name">{STAGE_LABELS[group.stage] ?? group.stage}</span><span className="stage-count">{group.done}/{group.total}{group.cached ? " · cache" : ""}</span><span className={`stage-chip ${group.state}`}>{{ done: "Concluída", running: "Em execução", pending: "Aguardando", retry: "Nova tentativa", failed: "Falhou" }[group.state]}</span>{group.detail && <small className="stage-detail">{group.detail}</small>}</li>)}</ul>
       {view.job.status === "failed" && <p className="no-text-warning"><strong>O processamento parou.</strong> {view.job.error} Clique em Processar para tentar de novo: etapas já concluídas não são refeitas.</p>}</>}
-  </section>;
+  </section>
+  {view?.job.status === "succeeded" && <ThematicMapPanel notebookId={view.job.notebookId} />}
+  </>;
 }

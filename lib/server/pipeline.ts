@@ -36,11 +36,17 @@ export function parseSettingsOrThrow(raw: unknown): CleaningSettings {
   catch (error) { if (error instanceof SettingsError) throw new ApiError(400, "invalid_request", error.message); throw error; }
 }
 
-// Lê as opções de limpeza do caderno. Usa "*" para continuar funcionando em bancos sem a migração 0007.
-export async function loadNotebookSettings(supabase: SupabaseClient, notebookId: string): Promise<CleaningSettings | null> {
+export type NotebookInfo = { name: string; discipline: string; settings: CleaningSettings };
+
+// Lê nome, disciplina e opções de limpeza do caderno. Usa "*" para continuar funcionando em bancos sem a migração 0007.
+export async function loadNotebook(supabase: SupabaseClient, notebookId: string): Promise<NotebookInfo | null> {
   const { data, error } = await supabase.from("notebooks").select("*").eq("id", notebookId).maybeSingle();
   if (error) throw new Error(`Falha ao carregar o caderno: ${error.message}`);
   if (!data) return null;
-  const row = data as { known_terms?: string[] | null; keep_references?: string[] | null; keep_professors?: boolean | null };
-  return { ...DEFAULT_CLEANING_SETTINGS, knownTerms: row.known_terms ?? [], keepReferences: row.keep_references ?? [], keepProfessors: row.keep_professors === true };
+  const row = data as { name?: string; discipline?: string | null; known_terms?: string[] | null; keep_references?: string[] | null; keep_professors?: boolean | null };
+  return { name: row.name ?? "", discipline: row.discipline?.trim() || row.name || "", settings: { ...DEFAULT_CLEANING_SETTINGS, knownTerms: row.known_terms ?? [], keepReferences: row.keep_references ?? [], keepProfessors: row.keep_professors === true } };
+}
+
+export async function loadNotebookSettings(supabase: SupabaseClient, notebookId: string): Promise<CleaningSettings | null> {
+  return (await loadNotebook(supabase, notebookId))?.settings ?? null;
 }
