@@ -6,6 +6,7 @@ type Result = { data: unknown; error: { message: string; code?: string } | null 
 export class FakeDb {
   tables: Record<string, Row[]> = { documents: [], notebooks: [], notebook_sources: [], jobs: [], job_stages: [], stage_cache: [] };
   clock = () => Date.now();
+  objects = new Map<string, Uint8Array>();
 }
 
 const DEFAULTS: Record<string, () => Row> = {
@@ -78,6 +79,14 @@ class Query implements PromiseLike<Result> {
 export function makeFakeSupabase(db: FakeDb, userId: string) {
   return {
     from: (table: string) => new Query(db, userId, table),
+    storage: {
+      from: () => ({
+        download: async (path: string) => {
+          const bytes = db.objects.get(path);
+          return bytes ? { data: new Blob([bytes as BlobPart]), error: null } : { data: null, error: { message: "Object not found" } };
+        },
+      }),
+    },
     // Mesma semântica da função SQL public.claim_next_stage.
     rpc: async (name: string, args: { p_job_id: string; p_lease_seconds: number }) => {
       if (name !== "claim_next_stage") return { data: null, error: { message: `rpc desconhecida: ${name}` } };

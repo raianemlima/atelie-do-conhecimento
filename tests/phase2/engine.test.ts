@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { advanceJob, backoffDelayMs, type EngineOptions, type StageLogEntry } from "@/lib/pipeline/engine";
-import { DEFAULT_HANDLERS } from "@/lib/pipeline/handlers";
+import { LEGACY_HANDLERS as DEFAULT_HANDLERS } from "@/lib/pipeline/handlers";
 import { MemoryPipelineRepository } from "@/lib/pipeline/memory-repository";
 import { jobInputHash, planStages } from "@/lib/pipeline/plan";
 import { StageError, summarizeProgress, type PipelineDeps, type PipelineDocument, type StageHandler, type StepOutcome } from "@/lib/pipeline/types";
@@ -10,7 +10,7 @@ let nowMs = Date.UTC(2026, 0, 1, 12, 0, 0);
 const clock = () => new Date(nowMs);
 const advanceTime = (ms: number) => { nowMs += ms; };
 
-const doc = (id: string, sha: string, pages: string[]): PipelineDocument => ({ id, sha256: sha, extractionStatus: "text", pageTexts: pages, pageCount: pages.length });
+const doc = (id: string, sha: string, pages: string[]): PipelineDocument => ({ id, format: "pdf", sha256: sha, extractionStatus: "text", pageTexts: pages, pageCount: pages.length });
 const depsOf = (...documents: PipelineDocument[]): PipelineDeps => ({ loadDocument: async (id) => documents.find((d) => d.id === id) ?? null });
 
 async function startJob(repo: MemoryPipelineRepository, documents: PipelineDocument[], handlers: StageHandler[], notebookId = "nb-1") {
@@ -238,7 +238,7 @@ describe("falha, retentativa e retomada", () => {
 describe("integração com o golden corpus (extração real + estágios)", () => {
   it("04-ruidoso: o estágio de limpeza reproduz o comportamento atual e fica persistido", async () => {
     const extraction = await extractCorpus("04-ruidoso.pdf");
-    const document: PipelineDocument = { id: "d1", sha256: "corpus-04", extractionStatus: extraction.status, pageTexts: extraction.pageTexts, pageCount: extraction.pageCount };
+    const document: PipelineDocument = { id: "d1", format: "pdf", sha256: "corpus-04", extractionStatus: extraction.status, pageTexts: extraction.pageTexts, pageCount: extraction.pageCount };
     const repo = new MemoryPipelineRepository(clock);
     const { job } = await startJob(repo, [document], DEFAULT_HANDLERS);
     await runToEnd(repo, DEFAULT_HANDLERS, depsOf(document), job.id);
@@ -247,7 +247,7 @@ describe("integração com o golden corpus (extração real + estágios)", () =>
   });
   it("06-digitalizado: segue sem texto (OCR é a Fase 3) sem quebrar o pipeline", async () => {
     const extraction = await extractCorpus("06-digitalizado.pdf");
-    const document: PipelineDocument = { id: "d2", sha256: "corpus-06", extractionStatus: extraction.status, pageTexts: extraction.pageTexts, pageCount: extraction.pageCount };
+    const document: PipelineDocument = { id: "d2", format: "pdf", sha256: "corpus-06", extractionStatus: extraction.status, pageTexts: extraction.pageTexts, pageCount: extraction.pageCount };
     const repo = new MemoryPipelineRepository(clock);
     const { job } = await startJob(repo, [document], DEFAULT_HANDLERS);
     const outcomes = await runToEnd(repo, DEFAULT_HANDLERS, depsOf(document), job.id);
