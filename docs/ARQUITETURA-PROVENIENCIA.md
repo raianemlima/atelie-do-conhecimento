@@ -65,7 +65,7 @@ Uma afirmação sem fonte suficiente não pode ser apresentada como fato confirm
 - Documentos, fontes e capítulos podem ser associados a um projeto; a apostila integrada usa os documentos filtrados pelo projeto ou pela biblioteca selecionada.
 - O PDF digitalizado sem camada textual permanece como `no-text`; nenhum OCR é simulado.
 - Os dados locais anteriores continuam no navegador até que a usuária execute a migração explícita na tela **Dados e backup**. A migração é aditiva e ignora hashes duplicados.
-- O backup ZIP existente ainda é legado local e não exporta nem restaura dados remotos do Supabase. Não há backup remoto automático, criptografia adicional ou sincronização offline nesta etapa.
+- O backup remoto manual exporta projetos, fontes, capítulos, metadados e originais do Supabase para um ZIP íntegro. A restauração automática desse pacote no Supabase ainda não existe; o restaurador legado continua restrito a dados locais. Não há backup remoto agendado, criptografia adicional ou sincronização offline nesta etapa.
 - Ainda não existe pesquisa web, integração com IA, base remota de conhecimento ou OCR. Esses recursos só poderão ser considerados se forem compatíveis com esta política e se a usuária autorizar explicitamente a tarefa e as fontes envolvidas.
 
 Documentos sensíveis só devem ser usados depois de: aplicar a migração SQL, criar a conta única no Supabase, desativar novos cadastros públicos no painel Auth e confirmar as políticas RLS e do bucket privado.

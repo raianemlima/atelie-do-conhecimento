@@ -2,6 +2,7 @@ import JSZip from "jszip";
 import { createId, now, Project, readCollection, Source, Chapter, writeCollection } from "@/lib/local-store";
 import { listDocuments, saveDocuments } from "@/lib/document-store";
 import type { DocumentMetadata, DocumentRecord } from "@/lib/document-types";
+import { downloadRemoteDocument, listChapters, listProjects, listRemoteDocuments, listSources } from "@/lib/supabase/data-store";
 
 const BACKUP_FORMAT = "atelie-conhecimento-backup";
 const BACKUP_VERSION = 1;
@@ -64,6 +65,10 @@ function metadataOf(document: DocumentRecord): DocumentMetadata {
   return { id: document.id, title: document.title, fileName: document.fileName, format: document.format, size: document.size, importedAt: document.importedAt, projectId: document.projectId, sha256: document.sha256, extractionStatus: document.extractionStatus, extractedText: document.extractedText, pageTexts: document.pageTexts, pageCount: document.pageCount };
 }
 
+function metadataOfRemote(document: Awaited<ReturnType<typeof listRemoteDocuments>>[number]): DocumentMetadata {
+  return { id: document.id, title: document.title, fileName: document.fileName, format: document.format, size: document.size, importedAt: document.importedAt, projectId: document.projectId, sha256: document.sha256, extractionStatus: document.extractionStatus, extractedText: document.extractedText, pageTexts: document.pageTexts, pageCount: document.pageCount };
+}
+
 async function addEntry(zip: JSZip, path: string, content: string | Uint8Array, kind: BackupEntry["kind"], entries: BackupEntry[]) {
   const bytes = typeof content === "string" ? encoder.encode(content) : content;
   zip.file(path, bytes);
@@ -84,6 +89,24 @@ export async function exportBackup() {
   for (const document of documents) {
     const bytes = new Uint8Array(await document.original.arrayBuffer());
     await addEntry(zip, `files/${document.id}/${safeFileName(document.fileName)}`, bytes, "original", entries);
+  }
+
+  const manifest: BackupManifest = { format: BACKUP_FORMAT, version: BACKUP_VERSION, appVersion: "0.1.0", exportedAt: now(), records: { projects: projects.length, sources: sources.length, chapters: chapters.length, documents: documents.length }, entries };
+  zip.file("manifest.json", jsonText(manifest));
+  return zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+}
+
+export async function exportRemoteBackup() {
+  const [projects, sources, chapters, documents] = await Promise.all([listProjects(), listSources(), listChapters(), listRemoteDocuments()]);
+  const zip = new JSZip();
+  const entries: BackupEntry[] = [];
+  await addEntry(zip, DATA_FILES[0], jsonText(projects), "json", entries);
+  await addEntry(zip, DATA_FILES[1], jsonText(sources), "json", entries);
+  await addEntry(zip, DATA_FILES[2], jsonText(chapters), "json", entries);
+  await addEntry(zip, DATA_FILES[3], jsonText(documents.map(metadataOfRemote)), "json", entries);
+  for (const document of documents) {
+    const original = await downloadRemoteDocument(document.storagePath);
+    await addEntry(zip, `files/${document.id}/${safeFileName(document.fileName)}`, new Uint8Array(await original.arrayBuffer()), "original", entries);
   }
   const manifest: BackupManifest = { format: BACKUP_FORMAT, version: BACKUP_VERSION, appVersion: "0.1.0", exportedAt: now(), records: { projects: projects.length, sources: sources.length, chapters: chapters.length, documents: documents.length }, entries };
   zip.file("manifest.json", jsonText(manifest));
