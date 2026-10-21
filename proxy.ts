@@ -25,7 +25,10 @@ export async function proxy(request: NextRequest) {
   });
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user && !isPublic) return NextResponse.redirect(new URL("/login", request.url));
+  if (!user && !isPublic) {
+    if (pathname.startsWith("/api/")) return NextResponse.json({ error: { code: "unauthenticated", message: "Sua sessão expirou. Entre novamente para continuar." } }, { status: 401 });
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
   if (user && pathname === "/login") return NextResponse.redirect(new URL("/", request.url));
   return response;
 }

@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "corpus": "python3 tests/golden/generate_corpus.py"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -23,6 +26,7 @@
     "@types/react-dom": "latest",
     "eslint": "latest",
     "eslint-config-next": "latest",
-    "typescript": "latest"
+    "typescript": "latest",
+    "vitest": "^5.0.5"
   }
 }
