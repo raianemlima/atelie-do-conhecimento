@@ -37,5 +37,13 @@ export function parseDraft(text: string): ThemeDraft {
     if (paragraphs.length === 0 && !table) throw new DraftValidationError(`Bloco ${index + 1} está vazio.`);
     return { type: block.type as BlockType, heading: block.heading.trim(), paragraphs, ...(table ? { table } : {}) };
   });
-  return { title: raw.title.trim(), blocks, citationsUsed: raw.citationsUsed };
+  let glossary: ThemeDraft["glossary"];
+  if (raw.glossary !== undefined) {
+    if (!Array.isArray(raw.glossary)) throw new DraftValidationError("glossary deve ser uma lista.");
+    glossary = raw.glossary.map((entry, index) => {
+      if (!isRecord(entry) || typeof entry.term !== "string" || typeof entry.definition !== "string" || !entry.term.trim() || !entry.definition.trim()) throw new DraftValidationError(`Glossário: item ${index + 1} inválido.`);
+      return { term: entry.term.trim(), definition: entry.definition.trim() };
+    });
+  }
+  return { title: raw.title.trim(), blocks, citationsUsed: raw.citationsUsed, ...(glossary?.length ? { glossary } : {}) };
 }

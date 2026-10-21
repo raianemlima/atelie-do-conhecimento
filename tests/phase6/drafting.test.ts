@@ -44,6 +44,21 @@ describe("schema da resposta", () => {
   });
 });
 
+describe("glossário na resposta", () => {
+  const gloss = (glossary: unknown) => valid({ glossary });
+  it("aceita termos com definição e ignora lista vazia", () => {
+    expect(parseDraft(gloss([{ term: " Pertinência ", definition: "Vínculo entre finalidade e objeto." }])).glossary).toEqual([{ term: "Pertinência", definition: "Vínculo entre finalidade e objeto." }]);
+    expect(parseDraft(gloss([])).glossary).toBeUndefined();
+  });
+  it.each([["não é lista", "x"], ["item sem definição", [{ term: "a" }]], ["termo vazio", [{ term: " ", definition: "d" }]]])("rejeita: %s", (_n, glossary) => {
+    expect(() => parseDraft(gloss(glossary))).toThrow(DraftValidationError);
+  });
+  it("citação inventada dentro do glossário também é recusada", () => {
+    const draft = parseDraft(gloss([{ term: "Honorários", definition: "Conforme a Súmula 999 do STJ, não são devidos." }]));
+    expect(checkDraft(draft, input).some((p) => p.includes("fora da lista"))).toBe(true);
+  });
+});
+
 describe("redação de um tema", () => {
   it("aceita texto que usa só citações fornecidas e soma tokens e custo", async () => {
     const ai = new ScriptedAi([response(valid({ blocks: [{ type: "development", heading: "Desenvolvimento", paragraphs: ["Conforme o art. 134 da CF/88, a Defensoria presta assistência."] }], citationsUsed: ["law|CF/1988|art:134"] }))]);

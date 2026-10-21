@@ -6,7 +6,7 @@ import type { DraftInput, ThemeDraft, ThemeDraftResult } from "@/lib/drafting/ty
 
 export const MAX_DRAFT_ATTEMPTS = 2;
 
-const textOf = (draft: ThemeDraft) => [draft.title, ...draft.blocks.flatMap((b) => [b.heading, ...b.paragraphs, ...(b.table ? [...b.table.headers, ...b.table.rows.flat()] : [])])].join("\n");
+const textOf = (draft: ThemeDraft) => [draft.title, ...draft.blocks.flatMap((b) => [b.heading, ...b.paragraphs, ...(b.table ? [...b.table.headers, ...b.table.rows.flat()] : [])]), ...(draft.glossary ?? []).flatMap((g) => [g.term, g.definition])].join("\n");
 const plain = (value: string) => value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
 // Regras de aceitação independentes do modelo: citações só do conjunto fornecido e nenhuma menção à origem.

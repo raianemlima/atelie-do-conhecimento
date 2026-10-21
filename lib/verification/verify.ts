@@ -21,7 +21,7 @@ const NOISE: { pattern: RegExp; label: string }[] = [
   { pattern: /\b(?:apostila|curso|professor(?:a)?|prof\.)\s+(?:de\s+)?\p{Lu}/u, label: "menção à origem (apostila, curso ou professor)" },
 ];
 
-const textBlocks = (draft: ThemeDraft) => draft.blocks.flatMap((block) => [block.heading, ...block.paragraphs, ...(block.table ? [...block.table.headers, ...block.table.rows.flat()] : [])]);
+const textBlocks = (draft: ThemeDraft) => [...draft.blocks.flatMap((block) => [block.heading, ...block.paragraphs, ...(block.table ? [...block.table.headers, ...block.table.rows.flat()] : [])]), ...(draft.glossary ?? []).flatMap((entry) => [entry.term, entry.definition])];
 const plain = (value: string) => value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/\s+/g, " ").trim();
 
 // Remove do texto as frases que citam algo que o registro não confirma e devolve o que foi removido.
