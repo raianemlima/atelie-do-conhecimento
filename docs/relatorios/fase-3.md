@@ -50,3 +50,10 @@
 3. Tela/campo para a lista de termos conhecidos do caderno (marca, curso, professor)?
 4. Autorizar o push deste commit; ainda faltam o Supabase de desenvolvimento e o relatório de auditoria.
 5. A frase "aprovado, siga para a fase 4" (ou "continue") quando quiser seguir.
+
+## Adendo (pedido posterior): professores e opções de limpeza
+- **Padrão novo:** o texto final não referencia professores (atribuições removidas, frase preservada e recapitalizada; cabeçalho/rodapé com professor sai por inteiro). Autor doutrinário sem "Prof." é preservado.
+- **Opção para manter/referenciar:** por caderno, na tela "Montar caderno > Opções de limpeza": *termos a remover*, *referências a manter* (nome, trecho ou link, protegido de qualquer remoção) e *manter menções a professores*.
+- **Interpretação que adotei:** "deixar a opção caso eu queira referenciar algum texto" = poder manter professores em geral ou proteger referências específicas. Se você quis dizer outra coisa (por exemplo, citar a fonte de cada trecho no texto), me diga.
+- **Evidência:** 225 testes; 5 mutações detectadas (opções ignoradas no advance, no hash do job, na chave de cache, política de professores, proteção de referências); migração 0007 validada em Postgres descartável (padrão seguro, limite de 100 itens, reversão preserva cadernos); tela verificada no Chromium (corpo da requisição, celular sem rolagem horizontal).
+- **Limite:** a migração 0007 não foi aplicada; com opções não padrão e sem ela, o servidor devolve erro de coluna inexistente.

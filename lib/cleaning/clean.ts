@@ -1,14 +1,24 @@
+import { PROFESSOR_DETECT, PROFESSOR_RULES } from "@/lib/cleaning/professors";
+import { maskReferences } from "@/lib/cleaning/references";
 import { NOISE_RULES, REVIEW_RULES, freshPattern, type NoiseCategory, type NoiseRule } from "@/lib/cleaning/rules";
 import { splitSentences } from "@/lib/cleaning/sentences";
 import { collapseSpaces, joinLines } from "@/lib/extraction/text-utils";
 import type { DocumentExtraction, LayoutBlock } from "@/lib/extraction/types";
 
-export const CLEANER_VERSION = "2";
+export const CLEANER_VERSION = "3";
 const MAX_SAMPLES = 100;
 
-export type CleanOptions = { knownTerms?: string[] };
+export type CleanOptions = {
+  // Marca, curso ou nome de professor a remover do corpo do texto.
+  knownTerms?: string[];
+  // Referências que a usuária quer MANTER (nome, trecho, link): nenhuma regra de remoção as altera.
+  keepReferences?: string[];
+  // Padrão "remove": o material final não referencia professores. "keep" mantém todas as menções.
+  professors?: "remove" | "keep";
+};
+type Policy = { knownTerms: RegExp[]; keepReferences: string[]; removeProfessors: boolean };
 export type CleanParagraph = { text: string; pages: number[]; kind: "body" | "table" | "footnote"; heading: boolean };
-export type AmbiguousItem = { reason: "repeated_short_text" | "course_structure_marker" | "possible_professor_mention" | "unique_header_footer_text"; text: string; pages: number[] };
+export type AmbiguousItem = { reason: "repeated_short_text" | "course_structure_marker" | "unique_header_footer_text"; text: string; pages: number[] };
 export type RemovalSample = { category: string; page: number; text: string };
 export type CleaningResult = {
   version: string;
@@ -55,31 +65,53 @@ class Recorder {
   }
 }
 
-function hasHardNoise(text: string, knownTerms: RegExp[]): NoiseCategory | null {
+function hasHardNoise(rawText: string, policy: Policy): NoiseCategory | null {
+  const text = maskReferences(rawText, policy.keepReferences).text;
   for (const rule of NOISE_RULES) { if (rule.scope !== "line" && test(rule, text)) return rule.category; }
-  return knownTerms.some((term) => term.test(text)) ? "known_term" : null;
+  if (policy.removeProfessors && PROFESSOR_DETECT.test(text)) return "professor";
+  return policy.knownTerms.some((term) => term.test(text)) ? "known_term" : null;
 }
 
-function cleanText(text: string, page: number, recorder: Recorder, knownTerms: RegExp[]): string {
-  let out = text;
+// Marca, durante a limpeza, onde uma remoção abriu uma frase: a próxima letra minúscula vira maiúscula.
+const SENTENCE_START = "\uE002";
+
+function cleanText(rawText: string, page: number, recorder: Recorder, policy: Policy): string {
+  const masked = maskReferences(rawText, policy.keepReferences);
+  let out = masked.text;
   let changed = false;
-  for (const rule of inlineRules) out = out.replace(freshPattern(rule.pattern), (match) => { if (match.trim()) { recorder.add(rule.category, page, match); changed = true; } return " "; });
-  for (const term of knownTerms) out = out.replace(new RegExp(term.source, "gi"), (match) => { recorder.add("known_term", page, match); changed = true; return " "; });
-  const sentences = splitSentences(collapseSpaces(out));
-  const kept = sentences.filter((sentence) => {
+  const strip = (pattern: RegExp, category: string) => {
+    const before = out;
+    out = out.replace(freshPattern(pattern), (match: string, ...rest: unknown[]) => {
+      if (!match.trim()) return " ";
+      recorder.add(category, page, match);
+      changed = true;
+      const offset = rest[rest.length - 2] as number;
+      return /^\s*$/.test(before.slice(0, offset)) || /[.!?]["”')\]]*\s*$/.test(before.slice(0, offset)) ? SENTENCE_START : " ";
+    });
+  };
+  if (policy.removeProfessors) for (const pattern of PROFESSOR_RULES) strip(pattern, "professor");
+  for (const rule of inlineRules) strip(rule.pattern, rule.category);
+  for (const term of policy.knownTerms) strip(new RegExp(term.source, "gi"), "known_term");
+  const kept = splitSentences(collapseSpaces(out)).filter((sentence) => {
     const rule = sentenceRules.find((candidate) => test(candidate, sentence));
     if (rule) { recorder.add(rule.category, page, sentence); changed = true; }
     return !rule;
   });
   // Sem remoções, o texto sai exatamente como entrou (só espaços normalizados): citações não podem ser alteradas.
-  return changed ? tidy(kept.join(" ")) : collapseSpaces(text);
+  if (!changed) return collapseSpaces(rawText);
+  const result = tidy(kept.join(" ")).replace(new RegExp(`${SENTENCE_START}\\s*(\\p{Ll})`, "gu"), (_, letter: string) => letter.toUpperCase()).replace(new RegExp(SENTENCE_START, "g"), "");
+  return masked.restore(collapseSpaces(result));
 }
 
 type Entry = { block: LayoutBlock; page: number };
 
 export function cleanDocument(extraction: DocumentExtraction, options: CleanOptions = {}): CleaningResult {
   const recorder = new Recorder();
-  const knownTerms = (options.knownTerms ?? []).map((term) => term.trim()).filter(Boolean).map((term) => new RegExp(`\\b${escape(term)}\\b`, "i"));
+  const policy: Policy = {
+    knownTerms: (options.knownTerms ?? []).map((term) => term.trim()).filter(Boolean).map((term) => new RegExp(`\\b${escape(term)}\\b`, "i")),
+    keepReferences: options.keepReferences ?? [],
+    removeProfessors: options.professors !== "keep",
+  };
   const entries: Entry[] = extraction.pages.flatMap((page) => page.blocks.map((block) => ({ block, page: page.page })));
   const pageCount = extraction.pages.length;
 
@@ -100,7 +132,7 @@ export function cleanDocument(extraction: DocumentExtraction, options: CleanOpti
     const zone = block.kind === "header" || block.kind === "footer";
     if (zone) {
       const repeated = (zoneKeys.get(frequencyKey(block.text))?.size ?? 0) >= threshold;
-      const noisy = lineRules.some((rule) => test(rule, block.text)) || hasHardNoise(block.text, knownTerms);
+      const noisy = lineRules.some((rule) => test(rule, block.text)) || hasHardNoise(block.text, policy);
       if (repeated || noisy) {
         recorder.add(repeated ? `running_${block.kind}` : String(noisy), page, block.text);
         for (const phrase of block.text.match(/(?:[A-ZÁ-Ú][\wÀ-ú]+\s+){1,4}[A-ZÁ-Ú][\wÀ-ú]+/g) ?? []) if (learned.size < 20) learned.add(phrase.trim());
@@ -109,11 +141,11 @@ export function cleanDocument(extraction: DocumentExtraction, options: CleanOpti
     }
     if (lineRules.some((rule) => test(rule, block.text))) { recorder.add("page_number", page, block.text); continue; }
     if (block.kind === "table") {
-      const rows = block.text.split("\n").map((row) => cleanText(row, page, recorder, knownTerms).replace(/^\|\s*|\s*\|$/g, "")).filter(hasContent);
+      const rows = block.text.split("\n").map((row) => cleanText(row, page, recorder, policy).replace(/^\|\s*|\s*\|$/g, "")).filter(hasContent);
       if (rows.length) paragraphs.push({ text: rows.join("\n"), pages: [page], kind: "table", heading: false });
       continue;
     }
-    const text = cleanText(block.text, page, recorder, knownTerms);
+    const text = cleanText(block.text, page, recorder, policy);
     if (!hasContent(text)) continue;
     if (zone && !block.heading && text.length <= 60) ambiguous.push({ reason: "unique_header_footer_text", text, pages: [page] });
     paragraphs.push({ text, pages: [page], kind: block.kind === "footnote" ? "footnote" : "body", heading: block.heading });
@@ -139,7 +171,7 @@ export function cleanDocument(extraction: DocumentExtraction, options: CleanOpti
   for (const entry of shortCount.values()) if (entry.pages.size >= 2) ambiguous.push({ reason: "repeated_short_text", text: entry.text, pages: [...entry.pages] });
   for (const paragraph of merged) {
     for (const rule of REVIEW_RULES) {
-      if (rule.pattern.test(paragraph.text) && (rule.reason === "possible_professor_mention" || paragraph.text.length <= 60)) ambiguous.push({ reason: rule.reason, text: paragraph.text.slice(0, 160), pages: paragraph.pages });
+      if (rule.pattern.test(paragraph.text) && paragraph.text.length <= 60) ambiguous.push({ reason: rule.reason, text: paragraph.text.slice(0, 160), pages: paragraph.pages });
     }
   }
 

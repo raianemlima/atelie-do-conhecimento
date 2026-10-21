@@ -2,6 +2,7 @@ import { cleanDocument, CLEANER_VERSION } from "@/lib/cleaning/clean";
 import { cleanDocumentText } from "@/lib/text-cleaner";
 import { extractOriginal, ExtractionError, type DocumentExtraction } from "@/lib/extraction";
 import { sha256 } from "@/lib/pipeline/hash";
+import { settingsKey } from "@/lib/pipeline/options";
 import { StageError, type Json, type StageContext, type StageHandler } from "@/lib/pipeline/types";
 
 function previousOutput(stages: StageContext["stages"], stage: string, subjectId: string | null) {
@@ -44,11 +45,11 @@ export const cleaningHandlerV2: StageHandler = {
   version: CLEANER_VERSION,
   inputKey({ stage, stages, deps }) {
     const extraction = previousOutput(stages, "extraction", stage.subjectId);
-    return sha256(JSON.stringify({ extraction, knownTerms: [...(deps.knownTerms ?? [])].sort() }));
+    return sha256(JSON.stringify({ extraction, settings: settingsKey({ knownTerms: deps.knownTerms ?? [], keepReferences: deps.keepReferences ?? [], keepProfessors: deps.keepProfessors === true }) }));
   },
   run({ stage, stages, deps }) {
     const extraction = previousOutput(stages, "extraction", stage.subjectId) as unknown as DocumentExtraction;
-    return Promise.resolve({ output: cleanDocument(extraction, { knownTerms: deps.knownTerms }) as unknown as Json });
+    return Promise.resolve({ output: cleanDocument(extraction, { knownTerms: deps.knownTerms, keepReferences: deps.keepReferences, professors: deps.keepProfessors ? "keep" : "remove" }) as unknown as Json });
   },
 };
 
