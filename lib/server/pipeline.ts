@@ -1,0 +1,30 @@
+import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { JobView } from "@/lib/pipeline/dto";
+import { summarizeProgress, type JobRow, type StageRow } from "@/lib/pipeline/types";
+import { SupabasePipelineRepository, toJob } from "@/lib/pipeline/supabase-repository";
+
+export function toJobView(job: JobRow, stages: StageRow[]): JobView {
+  return {
+    job,
+    progress: summarizeProgress(stages),
+    stages: stages.map(({ id, stage, subjectId, position, status, attempts, maxAttempts, nextAttemptAt, error, cacheHit, durationMs, tokensIn, tokensOut, costUsd }) => ({ id, stage, subjectId, position, status, attempts, maxAttempts, nextAttemptAt, error, cacheHit, durationMs, tokensIn, tokensOut, costUsd })),
+  };
+}
+
+export async function loadJobView(supabase: SupabaseClient, jobId: string): Promise<JobView | null> {
+  const repo = new SupabasePipelineRepository(supabase);
+  const job = await repo.getJob(jobId);
+  return job ? toJobView(job, await repo.listStages(jobId)) : null;
+}
+
+export async function listJobs(supabase: SupabaseClient, activeOnly: boolean): Promise<JobView[]> {
+  let query = supabase.from("jobs").select("*").order("created_at", { ascending: false }).limit(20);
+  if (activeOnly) query = query.in("status", ["queued", "running"]);
+  const { data, error } = await query;
+  if (error) throw new Error(`Falha ao listar jobs: ${error.message}`);
+  const repo = new SupabasePipelineRepository(supabase);
+  const jobs = ((data ?? []) as Parameters<typeof toJob>[0][]).map(toJob);
+  return Promise.all(jobs.map(async (job) => toJobView(job, await repo.listStages(job.id))));
+}
+
