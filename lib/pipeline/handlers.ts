@@ -6,6 +6,8 @@ import type { SegmentationResult } from "@/lib/segmentation/types";
 import { buildCitationRegistry } from "@/lib/citations/registry";
 import { DRAFT_PROMPT_VERSION } from "@/lib/drafting/prompt";
 import { draftTheme } from "@/lib/drafting/draft";
+import { estimateDraftCost } from "@/lib/ai/estimate";
+import { planIncremental, themeFingerprint } from "@/lib/drafting/versions";
 import { buildDraftInputs } from "@/lib/drafting/inputs";
 import type { CitationRegistry } from "@/lib/citations/types";
 import type { ThematicMap } from "@/lib/thematic/types";
@@ -139,24 +141,42 @@ export const draftingHandler: StageHandler = {
   inputKey({ stages, deps }) {
     return sha256(JSON.stringify({ provider: deps.ai?.provider.id ?? null, budget: deps.ai?.budget ?? null, map: previousOutput(stages, "thematic_map", null).map }));
   },
-  async run({ stages, deps }) {
+  async run({ job, stages, deps }) {
     if (!deps.ai) return { output: { skipped: true, reason: "Nenhum provedor de IA configurado.", themes: [] } };
     const map = previousOutput(stages, "thematic_map", null).map as unknown as ThematicMap;
     const registry = previousOutput(stages, "citation_registry", null) as unknown as CitationRegistry;
     const inputs = buildDraftInputs(map, segmentationsOf(stages).map((row) => row.output as unknown as SegmentationResult), registry);
-    const themes = [];
-    let tokensIn = 0, tokensOut = 0, costUsd = 0;
-    for (const input of inputs) {
-      if (costUsd >= deps.ai.budget.maxCostUsd) throw new StageError(`Teto de custo atingido antes de concluir todos os temas (${themes.length} de ${inputs.length} redigidos).`, false);
+    const store = deps.draftStore;
+    const previous = store ? await store.latest(job.notebookId) : null;
+    const progress = store ? await store.loadProgress(job.id) : {};
+    // Incremental: só refaz o que mudou desde a última versão e o que ainda não foi feito neste job.
+    const plan = planIncremental(inputs, previous);
+    const pending = plan.redo.filter((input) => progress[input.themeId]?.fingerprint !== themeFingerprint(input));
+    if (deps.ai.budget.pricing) {
+      const estimate = estimateDraftCost(pending, deps.ai.budget.pricing, deps.ai.budget.maxTokensPerCall);
+      if (estimate.costUsd > deps.ai.budget.maxCostUsd) throw new StageError(`A estimativa de custo (US$ ${estimate.costUsd.toFixed(4)} para ${estimate.themes} tema(s)) passa do teto confirmado (US$ ${deps.ai.budget.maxCostUsd.toFixed(4)}). Confirme um teto maior para continuar.`, false);
+    }
+    let tokensIn = 0, tokensOut = 0, costUsd = 0, done = 0;
+    for (const input of pending) {
+      if (costUsd >= deps.ai.budget.maxCostUsd) throw new StageError(`Teto de custo atingido antes de concluir todos os temas (${done} de ${pending.length} redigidos agora; o progresso foi guardado).`, false);
       const result = await draftTheme(deps.ai.provider, input, { maxTokens: deps.ai.budget.maxTokensPerCall });
       tokensIn += result.tokensIn; tokensOut += result.tokensOut; costUsd += result.costUsd;
       if (!result.draft) throw new StageError(`Não foi possível redigir o tema "${input.title}": ${result.error ?? "erro desconhecido"}`, false);
-      themes.push(result);
+      const theme = { fingerprint: themeFingerprint(input), title: input.title, result };
+      progress[input.themeId] = theme;
+      await store?.saveProgress(job.id, input.themeId, theme);
+      done += 1;
     }
-    return { output: { skipped: false, themes } as unknown as Json, tokensIn, tokensOut, costUsd };
+    const themes: ThemeDraftResult[] = inputs.map((input) => {
+      const fresh = progress[input.themeId];
+      return fresh && fresh.fingerprint === themeFingerprint(input) ? fresh.result : (previous?.themes[input.themeId]?.result as ThemeDraftResult);
+    });
+    const saved = await store?.saveGenerated({ notebookId: job.notebookId, jobId: job.id, order: inputs.map((i) => i.themeId), themes: Object.fromEntries(inputs.map((input, index) => [input.themeId, { fingerprint: themeFingerprint(input), title: input.title, result: themes[index] }])) });
+    return { output: { skipped: false, version: saved?.version ?? null, reused: plan.reuse.length, redrafted: pending.length, removed: plan.removed, themes } as unknown as Json, tokensIn, tokensOut, costUsd };
   },
 };
 
+// ---------------------------------------------------------------------------------------------------------------
 // Fase 7: verificação automática. Saída abaixo do mínimo (ou com problema bloqueante) faz a etapa falhar: nunca é "concluída".
 export const verificationHandler: StageHandler = {
   stage: "verification",

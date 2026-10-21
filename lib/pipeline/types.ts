@@ -64,6 +64,8 @@ export type PipelineDeps = {
   discipline?: string;
   mapStore?: import("@/lib/thematic/store").ThematicMapStore;
   // Provedor de IA e teto de custo. Ausente = etapas de IA são puladas (nenhuma chamada real é feita).
+  // Onde guardar as versões da redação (incremental, comparar e restaurar).
+  draftStore?: import("@/lib/drafting/versions").DraftVersionStore;
   ai?: { provider: import("@/lib/ai/types").AiProvider; budget: import("@/lib/ai/types").AiBudget };
 };
 
