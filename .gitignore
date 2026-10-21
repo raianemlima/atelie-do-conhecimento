@@ -4,3 +4,6 @@ out
 .env*
 !.env.example
 npm-debug.log*
+
+# Cache de compilação do TypeScript (regravado a cada tsc/next build)
+*.tsbuildinfo
