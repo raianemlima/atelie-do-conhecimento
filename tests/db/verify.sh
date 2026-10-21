@@ -13,7 +13,18 @@ apply() { "${PSQL[@]}" -d "$DB" -f "$1" >/dev/null; }
 apply tests/db/stubs.sql
 for f in 0001_secure_foundation 0002_document_pipeline_formats 0003_project_context 0004_project_ownership_policies; do apply "supabase/migrations/$f.sql"; done
 apply supabase/migrations/0006_pipeline_core.sql
-echo "OK  migrações 0001-0004 + 0006 aplicadas sem erro"
+apply supabase/migrations/0007_notebook_cleaning_options.sql
+echo "OK  migrações 0001-0004 + 0006 + 0007 aplicadas sem erro"
+# 0007: colunas com padrão seguro, limite de itens e reversão que preserva os cadernos
+"${PSQL[@]}" -d "$DB" -c "insert into auth.users(id, email) values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc','c@test'); insert into public.notebooks(id, owner_id, name) values ('b0000000-0000-4000-8000-0000000000d1','cccccccc-cccc-4ccc-8ccc-cccccccccccc','Sem opções');" >/dev/null
+test "$("${PSQL[@]}" -d "$DB" -Atc "select known_terms::text || keep_references::text || keep_professors from public.notebooks where id='b0000000-0000-4000-8000-0000000000d1'")" = "{}{}false"
+if "${PSQL[@]}" -d "$DB" -c "update public.notebooks set known_terms = (select array_agg(i::text) from generate_series(1,101) i) where id='b0000000-0000-4000-8000-0000000000d1'" >/dev/null 2>&1; then echo "FALHA: aceitou mais de 100 termos"; exit 1; fi
+"${PSQL[@]}" -d "$DB" -c "update public.notebooks set known_terms = array['Escola Alfa'], keep_professors = true where id='b0000000-0000-4000-8000-0000000000d1'" >/dev/null
+apply supabase/migrations/0007_notebook_cleaning_options.down.sql
+test "$("${PSQL[@]}" -d "$DB" -Atc "select count(*) from information_schema.columns where table_name='notebooks' and column_name in ('known_terms','keep_references','keep_professors')")" = "0"
+test "$("${PSQL[@]}" -d "$DB" -Atc "select count(*) from public.notebooks where id='b0000000-0000-4000-8000-0000000000d1'")" = "1"
+echo "OK  0007: padrão seguro, limite de 100 itens e reversão que preserva os cadernos"
+apply supabase/migrations/0007_notebook_cleaning_options.sql
 apply supabase/migrations/0006_pipeline_core.down.sql
 test "$("${PSQL[@]}" -d "$DB" -Atc "select count(*) from information_schema.tables where table_schema='public' and table_name in ('notebooks','jobs','job_stages','blocks')")" = "0"
 test "$("${PSQL[@]}" -d "$DB" -Atc "select count(*) from public.documents")" = "0"

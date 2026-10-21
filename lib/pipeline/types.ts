@@ -43,13 +43,23 @@ export type PlannedStage = { stage: StageName; subjectId: string | null; positio
 
 export type PipelineDocument = {
   id: string;
+  format: "pdf" | "docx" | "md" | "txt";
   sha256: string;
   extractionStatus: "text" | "no-text" | "failed";
   pageTexts: string[];
   pageCount: number;
 };
 
-export type PipelineDeps = { loadDocument(id: string): Promise<PipelineDocument | null> };
+export type PipelineDeps = {
+  loadDocument(id: string): Promise<PipelineDocument | null>;
+  // Bytes do arquivo original (o texto extraído no navegador não é confiável). Ausente = não disponível.
+  loadOriginal?(id: string): Promise<Uint8Array | null>;
+  ocr?: import("@/lib/extraction/types").OcrProvider;
+  // Opções de limpeza do caderno (lista da usuária).
+  knownTerms?: string[];
+  keepReferences?: string[];
+  keepProfessors?: boolean;
+};
 
 export type StageResult = { output: Json; tokensIn?: number; tokensOut?: number; costUsd?: number };
 

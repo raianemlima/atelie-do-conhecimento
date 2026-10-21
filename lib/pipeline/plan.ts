@@ -1,13 +1,14 @@
 import { sha256 } from "@/lib/pipeline/hash";
+import { settingsKey, type CleaningSettings } from "@/lib/pipeline/options";
 import { STAGE_ORDER, type PipelineDocument, type PlannedStage, type StageHandler } from "@/lib/pipeline/types";
 
 export const PIPELINE_VERSION = "2";
 
 // Um job é identificado pelo conteúdo: mesmas fontes (por hash) + mesmas versões de estágio = mesmo job.
-export function jobInputHash(documents: Pick<PipelineDocument, "sha256">[], handlers: StageHandler[]): string {
+export function jobInputHash(documents: Pick<PipelineDocument, "sha256">[], handlers: StageHandler[], settings?: CleaningSettings): string {
   const sources = documents.map((document) => document.sha256).sort();
   const stages = handlers.map((handler) => `${handler.stage}@${handler.version}`).sort();
-  return sha256(JSON.stringify({ pipeline: PIPELINE_VERSION, sources, stages }));
+  return sha256(JSON.stringify({ pipeline: PIPELINE_VERSION, sources, stages, ...(settings ? { settings: settingsKey(settings) } : {}) }));
 }
 
 export function planStages(documents: Pick<PipelineDocument, "id">[], handlers: StageHandler[]): PlannedStage[] {
