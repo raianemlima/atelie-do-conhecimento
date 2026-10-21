@@ -1,4 +1,7 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CORPUS_DIR } from "../helpers";
 import { ApiError } from "@/lib/server/http";
 import { toJobView } from "@/lib/server/pipeline";
 import { FakeDb, makeFakeSupabase } from "./fake-supabase";
@@ -14,15 +17,18 @@ const USER = "11111111-1111-4111-8111-111111111111";
 const OTHER = "99999999-9999-4999-8999-999999999999";
 const D1 = "d1111111-1111-4111-8111-111111111111";
 const D2 = "d2222222-2222-4222-8222-222222222222";
-const SECRET_TEXT = "TEXTO-CONFIDENCIAL-DO-DOCUMENTO";
+const SECRET_TEXT = "presta orientação jurídica e defesa dos necessitados";
+const PDF_BYTES = new Uint8Array(readFileSync(join(CORPUS_DIR, "01-texto-simples.pdf")));
 
 let db: FakeDb;
 const post = (body: unknown) => new Request("http://x/api/jobs", { method: "POST", body: JSON.stringify(body) });
 const ctx = (id: string) => ({ params: Promise.resolve({ id }) });
 const login = (userId = USER) => requireUser.mockResolvedValue({ supabase: makeFakeSupabase(db, userId), user: { id: userId } });
 
-function seedDocument(id: string, sha: string, owner = USER, status = "text") {
-  db.tables.documents.push({ id, owner_id: owner, sha256: sha, extraction_status: status, page_texts: [SECRET_TEXT, "segunda página"], page_count: 2 });
+function seedDocument(id: string, sha: string, owner = USER, withOriginal = true) {
+  const storagePath = `${owner}/${id}/original.pdf`;
+  db.tables.documents.push({ id, owner_id: owner, format: "pdf", sha256: sha, extraction_status: "text", page_texts: [], page_count: 2, storage_path: storagePath });
+  if (withOriginal) db.objects.set(storagePath, PDF_BYTES);
 }
 
 async function drive(jobId: string, maxSteps = 30) {
@@ -148,13 +154,14 @@ describe("ciclo completo via API", () => {
     const { body } = await drive(second.view.job.id);
     expect(body.view.stages.every((s: { cacheHit: boolean }) => s.cacheHit)).toBe(true);
   });
-  it("falha clara quando a extração do documento falhou na importação", async () => {
-    seedDocument(D1, "h1", USER, "failed");
+  it("falha clara (sem retentativa) quando o arquivo original não está no armazenamento", async () => {
+    seedDocument(D1, "h1", USER, false);
     login();
     const { view } = await (await createJob(post({ name: "n", documentIds: [D1] }))).json();
     const { body } = await drive(view.job.id);
     expect(body.outcome.kind).toBe("failed");
-    expect(body.view.job.error).toMatch(/Reenvie o arquivo/);
+    expect(body.view.job.error).toMatch(/Reenvie o documento/);
+    expect(db.tables.job_stages[0].attempts).toBe(1);
   });
 });
 

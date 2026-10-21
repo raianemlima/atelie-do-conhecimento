@@ -140,4 +140,76 @@ data = (OUT / "01-texto-simples.pdf").read_bytes()
 # 08 - protegido por senha
 write_pdf("08-protegido.pdf", [["DOCUMENTO PROTEGIDO POR SENHA", "", "Conteúdo indisponível sem a senha."]], encrypt="senha-de-teste")
 
+
+# --- Fase 3: layout (colunas, tabela, notas de rodapé) e PDF misto (texto + página digitalizada) ---
+def draw(c, x, y, lines, size=10.5, leading=14, font="Helvetica"):
+    c.setFont(font, size)
+    for line in lines:
+        c.drawString(x, y, line)
+        y -= leading
+    return y
+
+
+# 09 - duas colunas, com título em largura total
+c = canvas.Canvas(str(OUT / "09-duas-colunas.pdf"), pagesize=A4)
+c.setFont("Helvetica-Bold", 14)
+c.drawString(50, H - 110, "PRINCIPIOS DA DEFENSORIA PUBLICA")
+left = wrap("COLUNA ESQUERDA PRIMEIRO. A unidade impoe que a instituicao atue como um corpo unico sob a mesma chefia, de modo que a atuacao de um membro vincula a instituicao como um todo.", 42)
+left += [""] + wrap("A indivisibilidade permite a substituicao de um membro por outro sem solucao de continuidade, preservando o atendimento ao assistido.", 42)
+right = wrap("COLUNA DIREITA DEPOIS. A independencia funcional assegura ao membro liberdade de conviccao no exercicio da funcao, sem subordinacao hierarquica quanto ao merito.", 42)
+right += [""] + wrap("A autonomia funcional e administrativa decorre do texto constitucional e constitui garantia institucional.", 42)
+draw(c, 50, H - 150, left)
+draw(c, 310, H - 150, right)
+c.showPage()
+c.save()
+
+# 10 - tabela entre dois paragrafos
+c = canvas.Canvas(str(OUT / "10-tabela.pdf"), pagesize=A4)
+y = draw(c, 50, H - 110, wrap("A tabela a seguir compara as correntes sobre a legitimidade da Defensoria Publica para a acao civil publica, conforme o quadro.", 90))
+rows = [("Corrente", "Posicao", "Fundamento"), ("Ampla", "Admite", "Art. 134 CF"), ("Restrita", "Nega", "Hipossuficiencia"), ("Intermediaria", "Admite parcial", "Tutela coletiva")]
+y -= 12
+for row in rows:
+    for x, cell in zip((50, 200, 350), row):
+        c.setFont("Helvetica-Bold" if row is rows[0] else "Helvetica", 10.5)
+        c.drawString(x, y, cell)
+    y -= 16
+y -= 14
+draw(c, 50, y, wrap("Apos o quadro, o texto retoma a exposicao corrida sobre os efeitos praticos de cada corrente adotada pelos tribunais.", 90))
+c.showPage()
+c.save()
+
+# 11 - notas de rodape, cabecalho/rodape repetidos e numeracao (3 paginas)
+c = canvas.Canvas(str(OUT / "11-notas-de-rodape.pdf"), pagesize=A4)
+bodies = [
+    ("A assistencia juridica integral abrange a orientacao e a defesa.1 Ela independe de contrato de honorarios.", "1 Nota de rodape: conceito adotado pela doutrina majoritaria."),
+    ("A hipossuficiencia organizacional amplia o publico atendido.2 O tema e debatido nos tribunais superiores.", "2 Nota de rodape: ver debate sobre vulnerabilidade organizacional."),
+    ("A atuacao extrajudicial privilegia a solucao consensual dos conflitos.3 Isso reduz a litigiosidade.", "3 Nota de rodape: exemplo de mediacao em nucleos especializados."),
+]
+for number, (body, note) in enumerate(bodies, start=1):
+    c.setFont("Helvetica", 8)
+    c.drawString(50, H - 35, "Direito Constitucional - Material de Estudos")
+    draw(c, 50, H - 120, wrap(body, 90))
+    c.setStrokeColorRGB(0, 0, 0)
+    c.line(50, 120, 200, 120)
+    draw(c, 50, 108, wrap(note, 110), size=8, leading=10)
+    c.setFont("Helvetica", 9)
+    c.drawString(280, 28, f"{number}")
+    c.showPage()
+c.save()
+
+# 12 - misto: pagina 1 com texto, pagina 2 somente imagem (sem camada de texto), pagina 3 com texto
+img2 = Image.new("RGB", (1240, 300), "white")
+ImageDraw.Draw(img2).text((40, 80), "PAGINA DIGITALIZADA SEM CAMADA DE TEXTO", fill="black")
+buf2 = io.BytesIO()
+img2.save(buf2, format="PNG")
+buf2.seek(0)
+c = canvas.Canvas(str(OUT / "12-misto.pdf"), pagesize=A4)
+draw(c, 50, H - 100, wrap("Primeira pagina com texto: a Defensoria Publica presta orientacao juridica integral e gratuita aos necessitados.", 90), size=11)
+c.showPage()
+c.drawImage(ImageReader(buf2), 40, H - 260, width=520, height=126)
+c.showPage()
+draw(c, 50, H - 100, wrap("Terceira pagina com texto: a autonomia funcional e administrativa e garantia institucional prevista na Constituicao.", 90), size=11)
+c.showPage()
+c.save()
+
 print("Corpus gerado em", OUT)
