@@ -1,9 +1,25 @@
 const PAGE_MARKER = /^\s*\[\s*p(?:á|a)gina\s+\d+\s*\]\s*$/i;
 
+// Trechos de licenciamento/marca d'água que plataformas de curso imprimem em toda página
+// (ex.: "Licensed to <nome> - <email> - <cpf> Última atualização: <data>"). Costumam colar
+// sem quebra de linha ao conteúdo real, então são removidos por padrão, não por linha inteira.
+const NOISE_PATTERNS = [
+  /Licensed to [^\n]*?-\s*[^\s@]+@[^\s]+\s*-\s*[\d.\-/]+\s*(?:Última atualiza[cç][aã]o:\s*\d{2}\/\d{2}\/\d{4})?/gi,
+  /D[uú]vidas e sugest(?:[oõ]es):\s*[^\s@]+@[^\s]+(?:\.[a-z]{2,})?/gi,
+];
+
+function stripNoise(line: string) {
+  return NOISE_PATTERNS.reduce((current, pattern) => current.replace(pattern, " "), line);
+}
+
 function normalizeLine(line: string) {
-  return line
-    .replace(/\u00a0/g, " ")
-    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+  return stripNoise(
+    line
+      .replace(/\u00a0/g, " ")
+      .replace(/[\u200B-\u200D\uFEFF]/g, "")
+      .replace(/[ \t]+/g, " ")
+      .trim()
+  )
     .replace(/[ \t]+/g, " ")
     .trim();
 }
