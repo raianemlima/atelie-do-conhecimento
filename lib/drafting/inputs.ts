@@ -4,14 +4,17 @@ import type { DraftInput } from "@/lib/drafting/types";
 import type { SegmentationResult } from "@/lib/segmentation/types";
 import type { MapNode, ThematicMap } from "@/lib/thematic/types";
 
+// Todo nó ativo com conteúdo próprio é redigido, inclusive temas que também têm subtemas (o texto que vem antes dos subtemas).
+export function draftableNodes(map: ThematicMap): MapNode[] {
+  return map.nodes.filter((node) => !node.ignored && node.coverage.some((item) => item.chars > 0)).sort((a, b) => a.order - b.order);
+}
+
 // Fusão: reúne, por tema, os trechos de TODAS as fontes e o subconjunto do registro de citações que se aplica a eles.
 export function buildDraftInputs(map: ThematicMap, segmentations: SegmentationResult[], registry: CitationRegistry): DraftInput[] {
   const segments = new Map(segmentations.flatMap((s) => s.segments.map((segment) => [segment.id, segment] as const)));
   const byId = new Map(map.nodes.map((node) => [node.id, node] as const));
-  const hasChildren = new Set(map.nodes.filter((n) => n.parentId && !n.ignored).map((n) => n.parentId));
   const forbiddenTerms = map.documents.map((d) => d.title);
-  const leaves = map.nodes.filter((node: MapNode) => !node.ignored && !hasChildren.has(node.id) && node.coverage.length > 0).sort((a, b) => a.order - b.order);
-  return leaves.map((node) => {
+  return draftableNodes(map).map((node) => {
     const parent = node.parentId ? byId.get(node.parentId) : undefined;
     const sources = node.coverage.flatMap((item) => {
       const segment = segments.get(item.segmentId);
