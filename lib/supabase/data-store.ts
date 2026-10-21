@@ -18,6 +18,7 @@ type SourceRow = {
   url: string;
   notes: string;
   created_at: string;
+  project_id: string | null;
 };
 
 type ChapterRow = {
@@ -26,6 +27,7 @@ type ChapterRow = {
   content: string;
   status: Chapter["status"];
   updated_at: string;
+  project_id: string | null;
 };
 
 export type RemoteDocument = {
@@ -69,11 +71,11 @@ function mapProject(row: ProjectRow): Project {
 }
 
 function mapSource(row: SourceRow): Source {
-  return { id: row.id, title: row.title, type: row.type, url: row.url, notes: row.notes, createdAt: row.created_at };
+  return { id: row.id, title: row.title, type: row.type, url: row.url, notes: row.notes, createdAt: row.created_at, projectId: row.project_id };
 }
 
 function mapChapter(row: ChapterRow): Chapter {
-  return { id: row.id, title: row.title, content: row.content, status: row.status, updatedAt: row.updated_at };
+  return { id: row.id, title: row.title, content: row.content, status: row.status, updatedAt: row.updated_at, projectId: row.project_id };
 }
 
 function mapDocument(row: DocumentRow): RemoteDocument {
@@ -98,26 +100,33 @@ export async function listSources(): Promise<Source[]> {
   return ((data ?? []) as unknown as SourceRow[]).map(mapSource);
 }
 
-export async function createSource(input: Pick<Source, "title" | "type" | "url" | "notes">): Promise<Source> {
-  const { data, error } = await createClient().from("sources").insert({ title: input.title, type: input.type, url: input.url, notes: input.notes }).select("*").single();
+export async function createSource(input: Pick<Source, "title" | "type" | "url" | "notes" | "projectId">): Promise<Source> {
+  const { data, error } = await createClient().from("sources").insert({ title: input.title, type: input.type, url: input.url, notes: input.notes, project_id: input.projectId }).select("*").single();
   throwIfError(error, "Não foi possível salvar a fonte.");
   return mapSource(data as unknown as SourceRow);
 }
 
-export async function listChapters(): Promise<Chapter[]> {
-  const { data, error } = await createClient().from("chapters").select("*").order("updated_at", { ascending: false });
+export async function removeSource(id: string): Promise<void> {
+  const { error } = await createClient().from("sources").delete().eq("id", id);
+  throwIfError(error, "Não foi possível remover a fonte.");
+}
+
+export async function listChapters(projectId?: string): Promise<Chapter[]> {
+  let query = createClient().from("chapters").select("*").order("updated_at", { ascending: false });
+  if (projectId) query = query.eq("project_id", projectId);
+  const { data, error } = await query;
   throwIfError(error, "Não foi possível carregar os capítulos.");
   return ((data ?? []) as unknown as ChapterRow[]).map(mapChapter);
 }
 
-export async function createChapter(input: Pick<Chapter, "title" | "content" | "status">): Promise<Chapter> {
-  const { data, error } = await createClient().from("chapters").insert({ title: input.title, content: input.content, status: input.status }).select("*").single();
+export async function createChapter(input: Pick<Chapter, "title" | "content" | "status" | "projectId">): Promise<Chapter> {
+  const { data, error } = await createClient().from("chapters").insert({ title: input.title, content: input.content, status: input.status, project_id: input.projectId }).select("*").single();
   throwIfError(error, "Não foi possível criar o capítulo.");
   return mapChapter(data as unknown as ChapterRow);
 }
 
-export async function updateChapter(id: string, input: Pick<Chapter, "title" | "content" | "status">): Promise<Chapter> {
-  const { data, error } = await createClient().from("chapters").update({ title: input.title, content: input.content, status: input.status, updated_at: new Date().toISOString() }).eq("id", id).select("*").single();
+export async function updateChapter(id: string, input: Pick<Chapter, "title" | "content" | "status" | "projectId">): Promise<Chapter> {
+  const { data, error } = await createClient().from("chapters").update({ title: input.title, content: input.content, status: input.status, project_id: input.projectId, updated_at: new Date().toISOString() }).eq("id", id).select("*").single();
   throwIfError(error, "Não foi possível atualizar o capítulo.");
   return mapChapter(data as unknown as ChapterRow);
 }
@@ -138,7 +147,7 @@ export async function uploadRemoteDocument(input: { id: string; file: File; meta
   throwIfError(userError, "Não foi possível confirmar a sessão.");
   if (!userData.user) throw new Error("Sua sessão expirou. Entre novamente para importar documentos.");
   const storagePath = `${userData.user.id}/${input.id}/${safeFileName(input.file.name)}`;
-  const contentTypes: Record<DocumentFormat, string> = { pdf: "application/pdf", md: "text/markdown", txt: "text/plain" };
+  const contentTypes: Record<DocumentFormat, string> = { pdf: "application/pdf", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", md: "text/markdown", txt: "text/plain" };
   const upload = await supabase.storage.from("documents").upload(storagePath, input.file, { contentType: contentTypes[input.metadata.format], upsert: false });
   throwIfError(upload.error, "Não foi possível enviar o original para o armazenamento privado.");
   const row = { id: input.id, project_id: input.metadata.projectId, title: input.metadata.title, file_name: input.metadata.fileName, format: input.metadata.format, size: input.metadata.size, imported_at: input.metadata.importedAt, sha256: input.metadata.sha256, extraction_status: input.metadata.extractionStatus, extracted_text: input.metadata.extractedText, page_texts: input.metadata.pageTexts, page_count: input.metadata.pageCount, storage_path: storagePath };
@@ -159,8 +168,10 @@ export async function downloadRemoteDocument(storagePath: string): Promise<Blob>
 
 export async function removeRemoteDocument(document: RemoteDocument): Promise<void> {
   const supabase = createClient();
-  const { error: storageError } = await supabase.storage.from("documents").remove([document.storagePath]);
-  throwIfError(storageError, "Não foi possível remover o arquivo original.");
   const { error } = await supabase.from("documents").delete().eq("id", document.id);
   throwIfError(error, "Não foi possível remover os metadados do documento.");
+  const { error: storageError } = await supabase.storage.from("documents").remove([document.storagePath]);
+  if (storageError) {
+    throw new Error(`Os metadados foram removidos, mas não foi possível remover o arquivo original. ${storageError.message}`);
+  }
 }

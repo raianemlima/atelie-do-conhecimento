@@ -17,6 +17,7 @@ create table if not exists public.sources (
   type text not null,
   url text not null default '',
   notes text not null default '',
+  project_id uuid references public.projects(id) on delete set null,
   created_at timestamptz not null default now()
 );
 
@@ -26,6 +27,7 @@ create table if not exists public.chapters (
   title text not null,
   content text not null default '',
   status text not null default 'draft' check (status in ('draft', 'approved')),
+  project_id uuid references public.projects(id) on delete set null,
   updated_at timestamptz not null default now()
 );
 
@@ -35,7 +37,7 @@ create table if not exists public.documents (
   project_id uuid references public.projects(id) on delete set null,
   title text not null,
   file_name text not null,
-  format text not null check (format in ('pdf', 'md', 'txt')),
+  format text not null check (format in ('pdf', 'docx', 'md', 'txt')),
   size bigint not null check (size > 0),
   imported_at timestamptz not null default now(),
   sha256 text not null,
@@ -64,7 +66,7 @@ create policy "owner documents" on public.documents for all to authenticated usi
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('documents', 'documents', false, 26214400, array['application/pdf', 'text/markdown', 'text/plain'])
-on conflict (id) do update set public = false, file_size_limit = 26214400, allowed_mime_types = excluded.allowed_mime_types;
+on conflict (id) do update set public = false, file_size_limit = 26214400, allowed_mime_types = array['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/markdown', 'text/plain'];
 
 drop policy if exists "owner document objects select" on storage.objects;
 drop policy if exists "owner document objects insert" on storage.objects;

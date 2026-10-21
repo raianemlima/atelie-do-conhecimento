@@ -1,4 +1,4 @@
-export type DocumentFormat = "pdf" | "md" | "txt";
+export type DocumentFormat = "pdf" | "docx" | "md" | "txt";
 
 export type ExtractionStatus = "text" | "no-text" | "failed";
 
@@ -22,6 +22,7 @@ export type DocumentMetadata = Omit<DocumentRecord, "original">;
 
 export const formatLabels: Record<DocumentFormat, string> = {
   pdf: "PDF",
+  docx: "DOCX",
   md: "Markdown",
   txt: "TXT",
 };

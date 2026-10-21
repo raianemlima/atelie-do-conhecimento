@@ -20,13 +20,13 @@ export async function migrateLegacyData(): Promise<MigrationSummary> {
   }
   for (const source of sources) {
     const id = isUuid(source.id) ? source.id : crypto.randomUUID();
-    const { error } = await supabase.from("sources").upsert({ id, title: source.title, type: source.type, url: source.url, notes: source.notes, created_at: source.createdAt }, { onConflict: "id", ignoreDuplicates: true });
+    const { error } = await supabase.from("sources").upsert({ id, title: source.title, type: source.type, url: source.url, notes: source.notes, project_id: source.projectId ? (projectIds.get(source.projectId) ?? null) : null, created_at: source.createdAt }, { onConflict: "id", ignoreDuplicates: true });
     if (error) throw new Error(`Não foi possível migrar fontes. ${error.message}`);
     summary.sources += 1;
   }
   for (const chapter of chapters) {
     const id = isUuid(chapter.id) ? chapter.id : crypto.randomUUID();
-    const { error } = await supabase.from("chapters").upsert({ id, title: chapter.title, content: chapter.content, status: chapter.status, updated_at: chapter.updatedAt }, { onConflict: "id", ignoreDuplicates: true });
+    const { error } = await supabase.from("chapters").upsert({ id, title: chapter.title, content: chapter.content, status: chapter.status, project_id: chapter.projectId ? (projectIds.get(chapter.projectId) ?? null) : null, updated_at: chapter.updatedAt }, { onConflict: "id", ignoreDuplicates: true });
     if (error) throw new Error(`Não foi possível migrar capítulos. ${error.message}`);
     summary.chapters += 1;
   }

@@ -16,6 +16,7 @@ export type Source = {
   url: string;
   notes: string;
   createdAt: string;
+  projectId: string | null;
 };
 
 export type Chapter = {
@@ -24,6 +25,7 @@ export type Chapter = {
   content: string;
   status: "draft" | "approved";
   updatedAt: string;
+  projectId: string | null;
 };
 
 const keys = {

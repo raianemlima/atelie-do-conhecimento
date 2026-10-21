@@ -61,7 +61,8 @@ Uma afirmação sem fonte suficiente não pode ser apresentada como fato confirm
 - A autenticação usa Supabase Auth por sessão, com `@supabase/ssr` e proteção de rotas no proxy.
 - Projetos, fontes, capítulos e metadados de documentos são gravados no Supabase com políticas RLS por `auth.uid()`.
 - Arquivos originais são enviados somente ao bucket privado `documents`, em caminho particionado pelo usuário. O frontend usa apenas a chave pública/publishable; nenhuma chave secreta é embutida.
-- A importação e a extração de PDF/Markdown/TXT continuam locais no navegador antes do envio do original e dos metadados.
+- A importação e a extração de PDF/DOCX/Markdown/TXT continuam locais no navegador antes do envio do original e dos metadados.
+- Documentos, fontes e capítulos podem ser associados a um projeto; a apostila integrada usa os documentos filtrados pelo projeto ou pela biblioteca selecionada.
 - O PDF digitalizado sem camada textual permanece como `no-text`; nenhum OCR é simulado.
 - Os dados locais anteriores continuam no navegador até que a usuária execute a migração explícita na tela **Dados e backup**. A migração é aditiva e ignora hashes duplicados.
 - O backup ZIP existente ainda é legado local e não exporta nem restaura dados remotos do Supabase. Não há backup remoto automático, criptografia adicional ou sincronização offline nesta etapa.

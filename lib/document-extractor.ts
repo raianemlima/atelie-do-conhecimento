@@ -1,4 +1,5 @@
 import type { DocumentFormat, ExtractionStatus } from "@/lib/document-types";
+import JSZip from "jszip";
 
 export type ExtractionResult = {
   extractedText: string;
@@ -9,6 +10,20 @@ export type ExtractionResult = {
 
 function decodeText(buffer: ArrayBuffer) {
   return new TextDecoder("utf-8", { fatal: false }).decode(buffer).replace(/^\uFEFF/, "");
+}
+
+async function extractDocx(buffer: ArrayBuffer): Promise<ExtractionResult> {
+  const zip = await JSZip.loadAsync(buffer);
+  const entry = zip.file("word/document.xml");
+  if (!entry) return { extractedText: "", pageTexts: [""], pageCount: 1, status: "failed" };
+  const xml = await entry.async("text");
+  const text = xml
+    .replace(/<\/w:p>/g, "\n\n")
+    .replace(/<w:tab\/>/g, "\t")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/\n{3,}/g, "\n\n").trim();
+  return { extractedText: text, pageTexts: [text], pageCount: 1, status: text ? "text" : "no-text" };
 }
 
 async function extractPdf(buffer: ArrayBuffer): Promise<ExtractionResult> {
@@ -41,6 +56,7 @@ async function extractPdf(buffer: ArrayBuffer): Promise<ExtractionResult> {
 
 export async function extractDocumentText(file: Blob, format: DocumentFormat): Promise<ExtractionResult> {
   if (format === "pdf") return extractPdf(await file.arrayBuffer());
+  if (format === "docx") return extractDocx(await file.arrayBuffer());
   const extractedText = decodeText(await file.arrayBuffer());
   return { extractedText, pageTexts: [extractedText], pageCount: 1, status: extractedText.trim() ? "text" : "no-text" };
 }
