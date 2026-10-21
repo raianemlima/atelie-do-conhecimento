@@ -12,7 +12,7 @@ const root = process.cwd();
 const read = (file: string) => readFileSync(file, "utf8");
 
 describe("fronteira servidor/cliente", () => {
-  const clientFiles = [...walk(join(root, "components")), join(root, "lib/supabase/client.ts"), join(root, "lib/supabase/secure-documents.ts"), join(root, "lib/supabase/data-store.ts"), ...walk(join(root, "app")).filter((f) => /\.tsx$/.test(f) && read(f).includes('"use client"'))];
+  const clientFiles = [...walk(join(root, "components")), join(root, "lib/supabase/client.ts"), join(root, "lib/supabase/secure-documents.ts"), join(root, "lib/pipeline/client.ts"), join(root, "lib/pipeline/dto.ts"), join(root, "lib/supabase/data-store.ts"), ...walk(join(root, "app")).filter((f) => /\.tsx$/.test(f) && read(f).includes('"use client"'))];
 
   it("nenhum arquivo de cliente importa módulos de servidor", () => {
     const offenders = clientFiles.filter((file) => /from\s+["']@\/lib\/server\//.test(read(file)));
