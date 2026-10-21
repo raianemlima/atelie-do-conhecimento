@@ -61,10 +61,10 @@ describe("importação — validações atuais (somente no navegador/cliente)", 
 
 describe("feature flag do pipeline v2", () => {
   it("fica desligada por padrão", () => {
-    expect(isPipelineV2Enabled({})).toBe(false);
-    expect(isPipelineV2Enabled({ NEXT_PUBLIC_PIPELINE_V2: "false" })).toBe(false);
+    expect(isPipelineV2Enabled(undefined)).toBe(false);
+    expect(isPipelineV2Enabled("false")).toBe(false);
   });
   it("liga somente com o valor exato 'true'", () => {
-    expect(isPipelineV2Enabled({ NEXT_PUBLIC_PIPELINE_V2: "true" })).toBe(true);
+    expect(isPipelineV2Enabled("true")).toBe(true);
   });
 });
