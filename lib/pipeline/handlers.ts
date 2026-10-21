@@ -3,6 +3,7 @@ import { cleanDocumentText } from "@/lib/text-cleaner";
 import { extractOriginal, ExtractionError, type DocumentExtraction } from "@/lib/extraction";
 import { segmentDocument } from "@/lib/segmentation/segment";
 import type { SegmentationResult } from "@/lib/segmentation/types";
+import { buildCitationRegistry } from "@/lib/citations/registry";
 import { buildThematicMap } from "@/lib/thematic/build";
 import { sha256 } from "@/lib/pipeline/hash";
 import { settingsKey } from "@/lib/pipeline/options";
@@ -103,6 +104,25 @@ export const thematicMapHandler: StageHandler = {
   },
 };
 
+// Fase 5: registro de citações jurídicas do caderno (determinístico, sem IA).
+export const citationRegistryHandler: StageHandler = {
+  stage: "citation_registry",
+  scope: "notebook",
+  version: "1",
+  inputKey({ stages }) {
+    return sha256(JSON.stringify(segmentationsOf(stages).map((row) => row.output)));
+  },
+  async run({ stages, deps }) {
+    const rows = segmentationsOf(stages);
+    const documents = await Promise.all(rows.map(async (row) => {
+      const document = await deps.loadDocument(row.subjectId as string);
+      return { id: row.subjectId as string, title: document?.title ?? (row.subjectId as string) };
+    }));
+    const registry = buildCitationRegistry({ documents, segmentations: rows.map((row) => row.output as unknown as SegmentationResult) });
+    return { output: registry as unknown as Json };
+  },
+};
+
 // ---------------------------------------------------------------------------------------------------------------
 // Fluxo da Fase 2 (texto extraído no navegador + limpador antigo). Mantido para os testes de caracterização.
 // ---------------------------------------------------------------------------------------------------------------
@@ -143,4 +163,4 @@ export const cleaningHandler: StageHandler = {
 };
 
 export const LEGACY_HANDLERS: StageHandler[] = [extractionHandler, cleaningHandler];
-export const DEFAULT_HANDLERS: StageHandler[] = [extractionHandlerV2, cleaningHandlerV2, segmentationHandler, thematicMapHandler];
+export const DEFAULT_HANDLERS: StageHandler[] = [extractionHandlerV2, cleaningHandlerV2, segmentationHandler, thematicMapHandler, citationRegistryHandler];

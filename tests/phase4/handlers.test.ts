@@ -34,7 +34,7 @@ const stageOutput = <T,>(stages: StageRow[], stage: string, subject: string | nu
 describe("estágios de segmentação e mapa temático no pipeline", () => {
   it("plano: extração, limpeza e segmentação por documento, depois um único mapa do caderno, em ordem", () => {
     const plan = planStages([{ id: "a" }, { id: "b" }], DEFAULT_HANDLERS);
-    expect(plan.map((p) => `${p.stage}:${p.subjectId ?? "caderno"}`)).toEqual(["extraction:a", "extraction:b", "cleaning:a", "cleaning:b", "segmentation:a", "segmentation:b", "thematic_map:caderno"]);
+    expect(plan.map((p) => `${p.stage}:${p.subjectId ?? "caderno"}`)).toEqual(["extraction:a", "extraction:b", "cleaning:a", "cleaning:b", "segmentation:a", "segmentation:b", "thematic_map:caderno", "citation_registry:caderno"]);
   });
   it("duas apostilas: o mapa do pipeline é o mesmo do construtor e fica salvo como versão 1 (rascunho, automática)", async () => {
     const store = new MemoryMapStore();

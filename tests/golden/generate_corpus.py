@@ -287,4 +287,26 @@ structured("17-com-sumario.pdf", [
     ("p", "Texto real do segundo capitulo sobre a improbidade administrativa e suas sancoes."),
 ])
 
+# --- Fase 5: citações jurídicas em formatos variados e com divergências entre fontes ---
+# Súmula 421/STJ em 18a é o texto real; em 18b o texto foi ALTERADO de propósito (divergência sintética).
+# Julgados, relatores e autor são fictícios.
+structured("18a-citacoes-a.pdf", [
+    ("h1", "1. ASSISTÊNCIA JURÍDICA"),
+    ("p", "A assistência jurídica integral e gratuita está prevista no art. 5º, LXXIV, da CF/88, e a Defensoria Pública é regulada pelo art. 134 da Constituição Federal e pela Lei Complementar nº 80/94."),
+    ("p", "Nas relações de consumo aplica-se a Lei nº 8.078/90 (CDC), art. 6º, VIII, que assegura a facilitação da defesa dos direitos do consumidor."),
+    ("p", "Súmula 421 do STJ: Os honorários advocatícios não são devidos à Defensoria Pública quando ela atua contra a pessoa jurídica de direito público à qual pertence."),
+    ("h1", "2. JURISPRUDÊNCIA"),
+    ("p", "O tema foi examinado no REsp 1.234.567/SP, Rel. Min. Fulano de Tal, Segunda Turma, j. 10/10/2020, DJe 15/10/2020. Tese fixada: A atuação da Defensoria independe de comprovação de mandato."),
+    ("p", "No STF, o Tema 220 da repercussão geral (RE 592.581/RS) tratou da matéria, e a Súmula Vinculante 11 limita o uso de algemas."),
+    ("p", "Segundo Autor Exemplo, Manual Fictício de Processo, p. 123, a instituição é expressão do regime democrático."),
+])
+structured("18b-citacoes-b.pdf", [
+    ("h1", "Assistência jurídica integral"),
+    ("p", "A previsão está no artigo 5, inciso 74, da Constituição Federal, e no art. 134 da CF. A Lei 8078/1990, art. 6, inc. VIII, trata da defesa do consumidor."),
+    ("p", "Súmula nº 421/STJ: Os honorários advocatícios são devidos à Defensoria Pública, ainda que atue contra a pessoa jurídica de direito público à qual pertence."),
+    ("p", "Ver REsp 1234567-SP, Rel. Min. Beltrano de Tal, Terceira Turma, j. 11/10/2020."),
+    ("p", "Também a Súmula 7 do STJ veda o reexame de provas em recurso especial, e a ADI 4.270 foi julgada pelo STF."),
+    ("p", "Conforme Autor Exemplo, Manual Fictício de Processo, p. 130, o conceito é amplo."),
+])
+
 print("Corpus gerado em", OUT)

@@ -43,7 +43,7 @@ const outputOf = <T,>(stages: Awaited<ReturnType<typeof run>>["stages"], stage: 
 describe("estágios v2: extração do ORIGINAL no servidor + limpeza determinística", () => {
   it("PDF ruidoso: extrai do arquivo (ignora o texto do navegador) e entrega texto limpo que passa no verificador", async () => {
     const { outcomes, stages } = await run({ d1: "04-ruidoso.pdf" });
-    expect(outcomes.map((o) => o.kind)).toEqual(["progressed", "progressed", "progressed", "progressed", "done"]);
+    expect(outcomes.map((o) => o.kind)).toEqual(["progressed", "progressed", "progressed", "progressed", "progressed", "done"]);
     const extraction = outputOf<DocumentExtraction>(stages, "extraction", "d1");
     expect(extraction.pageCount).toBe(3);
     expect(JSON.stringify(extraction)).not.toContain("NÃO confiável");
