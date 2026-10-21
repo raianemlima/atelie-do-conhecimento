@@ -14,6 +14,9 @@ function formatDate(value: string) { return new Date(value).toLocaleDateString("
 function downloadBlob(blob: Blob, fileName: string) { const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = fileName; anchor.click(); window.setTimeout(() => URL.revokeObjectURL(url), 10_000); }
 function safeExportName(title: string) { return title.normalize("NFKD").replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-").toLowerCase() || "material-de-estudo"; }
 function escapeHtml(value: string) { return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+function documentBlocks(document: RemoteDocument) {
+  return document.pageTexts.flatMap((pageText, pageIndex) => pageText.split(/\n{2,}/).map((part) => part.replace(/\s+/g, " ").trim()).filter(Boolean).map((text) => ({ text, source: document.fileName, page: pageIndex + 1 })));
+}
 function buildStudyGuide(document: RemoteDocument) {
   const paragraphs = document.extractedText.split(/\n{2,}/).map((part) => part.replace(/\s+/g, " ").trim()).filter(Boolean);
   const title = escapeHtml(document.title);
@@ -24,12 +27,13 @@ function buildStudyGuide(document: RemoteDocument) {
 function buildIntegratedGuide(documents: RemoteDocument[], projectName: string) {
   const paragraphs = new Map<string, { text: string; sources: string[] }>();
   documents.forEach((document) => {
-    document.extractedText.split(/\n{2,}/).map((part) => part.replace(/\s+/g, " ").trim()).filter(Boolean).forEach((text) => {
+  documentBlocks(document).forEach(({ text, source, page }) => {
       const key = text.toLocaleLowerCase();
       const current = paragraphs.get(key);
-      if (current) current.sources.push(document.fileName);
-      else paragraphs.set(key, { text, sources: [document.fileName] });
-    });
+    const reference = `${source} · p. ${page}`;
+    if (current && !current.sources.includes(reference)) current.sources.push(reference);
+    else if (!current) paragraphs.set(key, { text, sources: [reference] });
+  });
   });
   const consolidated = Array.from(paragraphs.values()).map((paragraph, index) => `<article><span class="number">${String(index + 1).padStart(2, "0")}</span><div><p>${escapeHtml(paragraph.text)}</p><small>Fonte${paragraph.sources.length > 1 ? "s" : ""}: ${paragraph.sources.map(escapeHtml).join(" · ")}</small></div></article>`).join("");
   const sourceCatalog = documents.map((document, index) => `<li><strong>${String(index + 1).padStart(2, "0")} — ${escapeHtml(document.title)}</strong><br><span>${escapeHtml(document.fileName)} · ${formatLabels[document.format]} · ${document.pageCount} unidade(s)</span></li>`).join("");

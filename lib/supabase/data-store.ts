@@ -94,8 +94,10 @@ export async function createProject(input: Pick<Project, "name" | "subject" | "d
   return mapProject(data as unknown as ProjectRow);
 }
 
-export async function listSources(): Promise<Source[]> {
-  const { data, error } = await createClient().from("sources").select("*").order("created_at", { ascending: false });
+export async function listSources(projectId?: string): Promise<Source[]> {
+  let query = createClient().from("sources").select("*").order("created_at", { ascending: false });
+  if (projectId) query = query.eq("project_id", projectId);
+  const { data, error } = await query;
   throwIfError(error, "Não foi possível carregar as fontes.");
   return ((data ?? []) as unknown as SourceRow[]).map(mapSource);
 }
@@ -153,8 +155,9 @@ export async function uploadRemoteDocument(input: { id: string; file: File; meta
   const row = { id: input.id, project_id: input.metadata.projectId, title: input.metadata.title, file_name: input.metadata.fileName, format: input.metadata.format, size: input.metadata.size, imported_at: input.metadata.importedAt, sha256: input.metadata.sha256, extraction_status: input.metadata.extractionStatus, extracted_text: input.metadata.extractedText, page_texts: input.metadata.pageTexts, page_count: input.metadata.pageCount, storage_path: storagePath };
   const { data, error } = await supabase.from("documents").insert(row).select("*").single();
   if (error) {
-    await supabase.storage.from("documents").remove([storagePath]);
-    throw new Error(`Não foi possível salvar os metadados do documento. ${error.message}`);
+    const cleanup = await supabase.storage.from("documents").remove([storagePath]);
+    const cleanupMessage = cleanup.error ? ` A limpeza do original também falhou: ${cleanup.error.message}` : "";
+    throw new Error(`Não foi possível salvar os metadados do documento. ${error.message}.${cleanupMessage}`);
   }
   return mapDocument(data as unknown as DocumentRow);
 }
