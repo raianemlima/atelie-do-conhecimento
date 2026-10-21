@@ -51,3 +51,21 @@ export async function fingerprintFile(file: File) {
 export function ensureNotDuplicate(hash: string, existingHashes: string[]) {
   if (existingHashes.includes(hash)) throw new DocumentImportError("duplicate", "Este arquivo já está na biblioteca.");
 }
+
+// Nomes de arquivo vindos de downloads costumam usar "+" ou "%20" no lugar de espaço
+// (ex.: "Direito+Administrativo+-+Ponto+1.pdf"). Isso só afeta o título sugerido para
+// exibição; o nome original do arquivo é preservado intacto para download e auditoria.
+export function suggestDocumentTitle(fileName: string): string {
+  const withoutExtension = fileName.replace(/\.[^.]+$/, "");
+  let decoded = withoutExtension;
+  try {
+    decoded = decodeURIComponent(withoutExtension);
+  } catch {
+    decoded = withoutExtension;
+  }
+  return decoded
+    .replace(/[+_]/g, " ")
+    .replace(/\s*-\s*/g, " - ")
+    .replace(/\s+/g, " ")
+    .trim() || withoutExtension;
+}
