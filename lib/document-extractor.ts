@@ -12,6 +12,17 @@ function decodeText(buffer: ArrayBuffer) {
   return new TextDecoder("utf-8", { fatal: false }).decode(buffer).replace(/^\uFEFF/, "");
 }
 
+function decodeXmlEntities(value: string) {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code: string) => String.fromCodePoint(Number.parseInt(code, 16)));
+}
+
 async function extractDocx(buffer: ArrayBuffer): Promise<ExtractionResult> {
   const zip = await JSZip.loadAsync(buffer);
   const entry = zip.file("word/document.xml");
@@ -19,9 +30,10 @@ async function extractDocx(buffer: ArrayBuffer): Promise<ExtractionResult> {
   const xml = await entry.async("text");
   const text = xml
     .replace(/<\/w:p>/g, "\n\n")
-    .replace(/<w:tab\/>/g, "\t")
+    .replace(/<w:tab\s*\/>/g, "\t")
+    .replace(/<w:br\s*\/>/g, "\n")
     .replace(/<[^>]+>/g, "")
-    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-f]+);/gi, (entity) => decodeXmlEntities(entity))
     .replace(/\n{3,}/g, "\n\n").trim();
   return { extractedText: text, pageTexts: [text], pageCount: 1, status: text ? "text" : "no-text" };
 }
@@ -40,10 +52,22 @@ async function extractPdf(buffer: ArrayBuffer): Promise<ExtractionResult> {
   for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
     const page = await pdf.getPage(pageNumber);
     const content = await page.getTextContent();
-    const pageText = content.items
-      .map((item) => ("str" in item ? item.str : ""))
-      .join(" ")
-      .replace(/\s+/g, " ")
+    const lines = new Map<number, { x: number; text: string }[]>();
+    content.items.forEach((item) => {
+      if (!("str" in item) || !item.str.trim()) return;
+      const transform = "transform" in item && Array.isArray(item.transform) ? item.transform : null;
+      const x = transform?.[4] ?? 0;
+      const y = transform?.[5] ?? 0;
+      const lineKey = Math.round(y / 2) * 2;
+      const line = lines.get(lineKey) ?? [];
+      line.push({ x, text: item.str });
+      lines.set(lineKey, line);
+    });
+    const pageText = [...lines.entries()]
+      .sort(([first], [second]) => second - first)
+      .map(([, line]) => line.sort((first, second) => first.x - second.x).map((item) => item.text).join(" ").replace(/\s+/g, " ").trim())
+      .filter(Boolean)
+      .join("\n")
       .trim();
     pageTexts.push(pageText);
     page.cleanup();
