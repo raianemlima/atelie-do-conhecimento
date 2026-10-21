@@ -39,8 +39,10 @@ export function POST(request: Request) {
       const { data: owned, error: docsError } = await supabase.from("documents").select("id").in("id", uniqueIds);
       if (docsError) throw new Error(`Falha ao validar documentos: ${docsError.message}`);
       if ((owned ?? []).length !== uniqueIds.length) throw new ApiError(404, "not_found", "Um ou mais documentos não foram encontrados.");
+      const discipline = typeof body.discipline === "string" ? body.discipline.trim() : "";
+      if (discipline.length > 200) throw new ApiError(400, "invalid_request", "A disciplina deve ter até 200 caracteres.");
       const optionColumns = settings && !isDefaultSettings(settings) ? { known_terms: settings.knownTerms, keep_references: settings.keepReferences, keep_professors: settings.keepProfessors } : {};
-      const { data: notebook, error: notebookError } = await supabase.from("notebooks").insert({ name, ...optionColumns }).select("id").single();
+      const { data: notebook, error: notebookError } = await supabase.from("notebooks").insert({ name, ...(discipline ? { discipline } : {}), ...optionColumns }).select("id").single();
       if (notebookError || !notebook) throw new Error(`Falha ao criar o caderno: ${notebookError?.message ?? "resposta vazia"}`);
       notebookId = notebook.id as string;
       const linked = await supabase.from("notebook_sources").insert(uniqueIds.map((documentId) => ({ notebook_id: notebookId, document_id: documentId })));

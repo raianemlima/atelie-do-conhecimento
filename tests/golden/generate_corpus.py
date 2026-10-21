@@ -97,10 +97,9 @@ write_pdf("03b-quase-identico.pdf", [["PRINCÍPIOS INSTITUCIONAIS", ""] + base_a
 
 # 04 - ruidoso (cursinho, marca d'água, links, propaganda, hifenização, numeração)
 noise_body = [
-    paragraphs(
-        "O Estado prestará assistência jurídica integral e gratuita aos que comprovarem insuficiên-",
-        "cia de recursos, conforme o material do Curso Exemplo, módulo 3.",
-        "A Defensoria Pública é essencial à função jurisdicional do Estado."),
+    # A palavra "insuficiência" é hifenizada na quebra de linha DENTRO do mesmo parágrafo (sem linha em branco).
+    ["O Estado prestará assistência jurídica integral e gratuita aos que comprovarem", "insuficiên-", "cia de recursos, conforme o material do Curso Exemplo, módulo 3.", ""]
+    + paragraphs("A Defensoria Pública é essencial à função jurisdicional do Estado."),
     paragraphs(
         "A atuação extrajudicial inclui a promoção da conciliação e da mediação entre as partes.",
         "Acesse www.cursoexemplo.com.br/bonus e baixe o material extra. Siga @cursoexemplo no Instagram."),
@@ -217,5 +216,75 @@ write_pdf("13-professor.pdf", [["ATO ADMINISTRATIVO", ""] + paragraphs(
     "Segundo o Prof. Fulano de Tal, o ato administrativo vinculado não admite juízo de conveniência.",
     "A doutrina de Celso Antônio Bandeira de Mello aponta que a discricionariedade tem limites legais.",
     "O Prof. Fulano de Tal explica que o controle judicial alcança a legalidade do ato.")])
+
+# --- Fase 4: fontes com estrutura (títulos, subtítulos, artigos) para segmentação e mapa temático ---
+def structured(name, items):
+    """items: ("h1"|"h2"|"p"|"toc", texto). Títulos em negrito e fonte maior; o corpo em 10.5."""
+    c = canvas.Canvas(str(OUT / name), pagesize=A4)
+    y = H - 100
+    def need(space):
+        nonlocal y
+        if y - space < 70:
+            c.showPage()
+            y = H - 100
+    for kind, text in items:
+        if kind == "h1":
+            need(60); y -= 12; c.setFont("Helvetica-Bold", 15); c.drawString(50, y, text); y -= 26
+        elif kind == "h2":
+            need(50); y -= 8; c.setFont("Helvetica-Bold", 12.5); c.drawString(50, y, text); y -= 22
+        else:
+            lines = wrap(text, 92)
+            need(len(lines) * 14 + 10)
+            c.setFont("Helvetica", 10.5)
+            for line in lines:
+                c.drawString(50, y, line)
+                y -= 14
+            y -= 8
+    c.showPage()
+    c.save()
+
+
+structured("14a-apostila-a.pdf", [
+    ("h1", "1. RESPONSABILIDADE CIVIL DO ESTADO"),
+    ("p", "A responsabilidade civil do Estado e o dever de reparar os danos que os agentes publicos causam a terceiros no exercicio da funcao."),
+    ("h2", "1.1 Teoria do risco administrativo"),
+    ("p", "Pela teoria do risco administrativo, a responsabilidade do Estado e objetiva e dispensa a prova da culpa, bastando o dano e o nexo causal."),
+    ("h2", "1.2 Responsabilidade por omissao"),
+    ("p", "Na omissao especifica a responsabilidade e objetiva; na omissao generica exige-se a demonstracao da culpa administrativa."),
+    ("h1", "2. IMPROBIDADE ADMINISTRATIVA"),
+    ("p", "A improbidade administrativa alcanca atos que importam enriquecimento ilicito, prejuizo ao erario ou violacao a principios da administracao."),
+])
+structured("14b-apostila-b.pdf", [
+    ("h1", "Responsabilidade civil extracontratual do Estado"),
+    ("p", "O Estado responde pelos danos causados por seus agentes, nessa qualidade, nos termos da Constituicao Federal, independentemente de culpa."),
+    ("h2", "Risco administrativo"),
+    ("p", "O risco administrativo admite excludentes, como a culpa exclusiva da vitima, o caso fortuito e a forca maior, que afastam o nexo causal."),
+    ("h2", "Prescricao"),
+    ("p", "A pretensao de reparacao civil contra a Fazenda Publica prescreve em cinco anos, contados da data do ato ou fato do qual se originou o dano."),
+])
+structured("15-lei-seca.pdf", [
+    ("h1", "TITULO II"),
+    ("h1", "DOS DIREITOS E GARANTIAS FUNDAMENTAIS"),
+    ("h2", "CAPITULO I DOS DIREITOS E DEVERES INDIVIDUAIS E COLETIVOS"),
+    ("p", "Art. 5o Todos sao iguais perante a lei, sem distincao de qualquer natureza, garantindo-se aos brasileiros e aos estrangeiros residentes no Pais a inviolabilidade do direito a vida, a liberdade, a igualdade, a seguranca e a propriedade, nos termos seguintes:"),
+    ("p", "I - homens e mulheres sao iguais em direitos e obrigacoes, nos termos desta Constituicao;"),
+    ("p", "II - ninguem sera obrigado a fazer ou deixar de fazer alguma coisa senao em virtude de lei;"),
+    ("p", "Art. 6o Sao direitos sociais a educacao, a saude, a alimentacao, o trabalho, a moradia, o transporte, o lazer, a seguranca, a previdencia social, a protecao a maternidade e a infancia, a assistencia aos desamparados, na forma desta Constituicao."),
+])
+structured("16-sem-estrutura.pdf", [
+    ("p", "A assistencia juridica integral abrange a orientacao, a consultoria e a defesa dos necessitados em todos os graus de jurisdicao."),
+    ("p", "A hipossuficiencia organizacional amplia o publico atendido pela instituicao, alcançando grupos vulneraveis."),
+    ("p", "A atuacao extrajudicial privilegia a solucao consensual dos conflitos e reduz a litigiosidade."),
+])
+# 17 - sumario com pontilhado (nao pode virar tema) + capitulos
+structured("17-com-sumario.pdf", [
+    ("h1", "SUMARIO"),
+    ("p", "1. RESPONSABILIDADE CIVIL DO ESTADO ............................ 3"),
+    ("p", "2. IMPROBIDADE ADMINISTRATIVA ........................................ 5"),
+    ("h1", "1. RESPONSABILIDADE CIVIL DO ESTADO"),
+    ("p", "Texto real do primeiro capitulo sobre a responsabilidade civil do Estado e seus pressupostos."),
+    ("h1", "2. IMPROBIDADE ADMINISTRATIVA"),
+    ("p", "Texto real do segundo capitulo sobre a improbidade administrativa e suas sancoes."),
+])
 
 print("Corpus gerado em", OUT)

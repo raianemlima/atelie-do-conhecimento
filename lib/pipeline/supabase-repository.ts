@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CleaningSettings } from "@/lib/pipeline/options";
+import { SupabaseMapStore } from "@/lib/thematic/supabase-store";
 import type { JobRow, JobStatus, Json, PipelineDeps, PipelineDocument, PipelineRepository, PlannedStage, StageName, StageRow } from "@/lib/pipeline/types";
 
 type JobDb = { id: string; notebook_id: string; kind: string; status: JobStatus; input_hash: string; error: string | null; created_at: string; updated_at: string; finished_at: string | null };
@@ -96,16 +97,18 @@ export class SupabasePipelineRepository implements PipelineRepository {
   }
 }
 
-export function supabasePipelineDeps(supabase: SupabaseClient, settings?: CleaningSettings): PipelineDeps {
+export function supabasePipelineDeps(supabase: SupabaseClient, settings?: CleaningSettings, discipline?: string): PipelineDeps {
   return {
+    discipline,
+    mapStore: new SupabaseMapStore(supabase),
     knownTerms: settings?.knownTerms,
     keepReferences: settings?.keepReferences,
     keepProfessors: settings?.keepProfessors,
     async loadDocument(id: string): Promise<PipelineDocument | null> {
-      const { data, error } = await supabase.from("documents").select("id, format, sha256, extraction_status, page_texts, page_count").eq("id", id).maybeSingle();
+      const { data, error } = await supabase.from("documents").select("id, title, format, sha256, extraction_status, page_texts, page_count").eq("id", id).maybeSingle();
       check(error, "Falha ao carregar o documento");
       if (!data) return null;
-      return { id: data.id, format: data.format, sha256: data.sha256, extractionStatus: data.extraction_status, pageTexts: (data.page_texts as string[] | null) ?? [], pageCount: data.page_count };
+      return { id: data.id, title: data.title, format: data.format, sha256: data.sha256, extractionStatus: data.extraction_status, pageTexts: (data.page_texts as string[] | null) ?? [], pageCount: data.page_count };
     },
     async loadOriginal(id: string): Promise<Uint8Array | null> {
       const { data: row, error } = await supabase.from("documents").select("storage_path").eq("id", id).maybeSingle();

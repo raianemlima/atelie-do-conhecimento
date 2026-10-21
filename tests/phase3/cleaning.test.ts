@@ -22,7 +22,8 @@ describe("PDF ruidoso do corpus passa no verificador de ruído", () => {
   it("texto final exato: só conteúdo, sem cabeçalho, rodapé, marca d'água, link, propaganda ou página", async () => {
     const result = await clean("04-ruidoso.pdf");
     expect(result.text).toBe([
-      "O Estado prestará assistência jurídica integral e gratuita aos que comprovarem insuficiência de recursos. A Defensoria Pública é essencial à função jurisdicional do Estado.",
+      "O Estado prestará assistência jurídica integral e gratuita aos que comprovarem insuficiência de recursos.",
+      "A Defensoria Pública é essencial à função jurisdicional do Estado.",
       "A atuação extrajudicial inclui a promoção da conciliação e da mediação entre as partes.",
       "A autonomia funcional e administrativa decorre do texto constitucional e é garantia institucional.",
     ].join("\n\n"));

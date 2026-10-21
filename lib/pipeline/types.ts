@@ -43,6 +43,7 @@ export type PlannedStage = { stage: StageName; subjectId: string | null; positio
 
 export type PipelineDocument = {
   id: string;
+  title?: string;
   format: "pdf" | "docx" | "md" | "txt";
   sha256: string;
   extractionStatus: "text" | "no-text" | "failed";
@@ -59,6 +60,9 @@ export type PipelineDeps = {
   knownTerms?: string[];
   keepReferences?: string[];
   keepProfessors?: boolean;
+  // Disciplina do caderno (raiz do mapa temático) e onde guardar as versões do mapa.
+  discipline?: string;
+  mapStore?: import("@/lib/thematic/store").ThematicMapStore;
 };
 
 export type StageResult = { output: Json; tokensIn?: number; tokensOut?: number; costUsd?: number };
@@ -70,6 +74,8 @@ export type StageHandler = {
   scope: "document" | "notebook";
   // Mude a versão sempre que a lógica ou o prompt do estágio mudar: invalida o cache por hash.
   version: string;
+  // false = nunca usar o cache por hash (etapa barata e determinística, ou com efeito colateral que precisa rodar sempre).
+  cache?: boolean;
   inputKey(context: StageContext): Promise<string> | string;
   run(context: StageContext): Promise<StageResult>;
 };

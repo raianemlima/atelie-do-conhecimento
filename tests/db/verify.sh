@@ -31,8 +31,17 @@ test "$("${PSQL[@]}" -d "$DB" -Atc "select count(*) from public.documents")" = "
 echo "OK  reversão (down) remove só o pipeline e preserva documents"
 apply supabase/migrations/0006_pipeline_core.sql
 echo "OK  reaplicação após a reversão"
+
+# 0008: mapa temático versionado (aplicada depois do ciclo da 0006, pois depende de notebooks e jobs)
+apply supabase/migrations/0008_thematic_maps.sql
+apply supabase/migrations/0008_thematic_maps.down.sql
+test "$("${PSQL[@]}" -d "$DB" -Atc "select count(*) from information_schema.tables where table_name='thematic_maps'")" = "0"
+test "$("${PSQL[@]}" -d "$DB" -Atc "select count(*) from public.notebooks")" != ""
+apply supabase/migrations/0008_thematic_maps.sql
+echo "OK  0008: aplica, reverte (sem afetar cadernos) e reaplica"
 "${PSQL[@]}" -d "$DB" -f tests/db/assertions.sql | grep -E "^(OK|FALHA)" 
 
+"${PSQL[@]}" -d "$DB" -f tests/db/assertions-maps.sql | grep -E "^(OK|FALHA)"
 # Concorrência real: duas sessões tentam reivindicar a mesma etapa ao mesmo tempo.
 "${PSQL[@]}" -d "$DB" >/dev/null <<'SQL'
 select set_config('request.jwt.claim.sub','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',false);
@@ -50,4 +59,13 @@ c1=$(grep -E '^[0-9]+$' /tmp/claim1.out | head -1); c2=$(grep -E '^[0-9]+$' /tmp
 att=$("${PSQL[@]}" -d "$DB" -Atc "select attempts from public.job_stages where id='e0000000-0000-4000-8000-0000000000c1'")
 if [ "$((c1 + c2))" = "1" ] && [ "$att" = "1" ]; then echo "OK  concorrência real: dois workers, uma única reivindicação (attempts=$att)"; else echo "FALHA concorrência: c1=$c1 c2=$c2 attempts=$att"; exit 1; fi
 rm -f /tmp/claim1.out /tmp/claim2.out
+# Concorrência de versões do mapa: duas edições simultâneas nunca recebem o mesmo número.
+SESSION_A='select set_config($$request.jwt.claim.sub$$,$$aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa$$,true); set local role authenticated;'
+( "${PSQL[@]}" -d "$DB" -At -c "begin; $SESSION_A select (public.save_thematic_map('b0000000-0000-4000-8000-0000000000e1', null, 2, null, 'edited', 'x', '{}', '[]')).version; select pg_sleep(1.5); commit;" > /tmp/v1.out ) &
+sleep 0.5
+"${PSQL[@]}" -d "$DB" -At -c "begin; $SESSION_A select (public.save_thematic_map('b0000000-0000-4000-8000-0000000000e1', null, 2, null, 'edited', 'x', '{}', '[]')).version; commit;" > /tmp/v2.out
+wait
+mine=$(grep -E '^[0-9]+$' /tmp/v1.out | head -1); other=$(grep -E '^[0-9]+$' /tmp/v2.out | head -1)
+if [ -n "$mine" ] && [ -n "$other" ] && [ "$mine" != "$other" ]; then echo "OK  concorrência real: duas edições simultâneas receberam versões distintas ($mine e $other)"; else echo "FALHA concorrência de versões: $mine / $other"; exit 1; fi
+rm -f /tmp/v1.out /tmp/v2.out
 echo "TODAS AS VERIFICAÇÕES DE BANCO PASSARAM"

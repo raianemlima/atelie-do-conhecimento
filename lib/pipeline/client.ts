@@ -10,6 +10,6 @@ async function call<T>(input: string, init?: RequestInit): Promise<T> {
   return payload;
 }
 
-export const startJob = (input: { name: string; documentIds: string[]; options?: CleaningSettings }) => call<{ created: boolean; view: JobView }>("/api/jobs", { method: "POST", body: JSON.stringify(input) });
+export const startJob = (input: { name: string; discipline?: string; documentIds: string[]; options?: CleaningSettings }) => call<{ created: boolean; view: JobView }>("/api/jobs", { method: "POST", body: JSON.stringify(input) });
 export const listActiveJobs = () => call<{ jobs: JobView[] }>("/api/jobs?active=1");
 export const advanceJobStep = (jobId: string) => call<AdvanceResponse>(`/api/jobs/${encodeURIComponent(jobId)}/advance`, { method: "POST" });
